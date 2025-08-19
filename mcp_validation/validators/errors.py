@@ -63,7 +63,7 @@ class ErrorComplianceValidator(BaseValidator):
     ) -> None:
         """Test error response for invalid method calls."""
         try:
-            response = await context.transport.send_and_receive(
+            response: Dict[str, Any] = await context.transport.send_and_receive(
                 "invalid_method_that_does_not_exist",
                 params={},
                 timeout=self.config.get("timeout", 5.0),

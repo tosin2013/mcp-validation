@@ -16,7 +16,7 @@ from .config.settings import (
     ValidatorConfig,
     load_config_from_env,
 )
-from .core.result import MCPValidationResult, ValidationContext, ValidationSession, ValidatorResult
+from .core.result import MCPValidationResult, ValidationSession, ValidatorResult
 from .core.transport import JSONRPCTransport
 
 # Core components
@@ -27,7 +27,7 @@ from .reporting.console import ConsoleReporter
 from .reporting.json_report import JSONReporter
 
 # Validator framework
-from .validators.base import BaseValidator
+from .validators.base import BaseValidator, ValidationContext
 
 __version__ = "2.0.0"
 

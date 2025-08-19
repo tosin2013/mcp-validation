@@ -35,18 +35,6 @@ class ValidatorResult:
     data: Dict[str, Any]
     execution_time: float
 
-
-@dataclass
-class ValidationContext:
-    """Context passed to validators containing process and shared state."""
-
-    process: Any  # asyncio.subprocess.Process
-    server_info: Dict[str, Any]
-    capabilities: Dict[str, Any]
-    timeout: float = 30.0
-    transport: Any = None  # JSONRPCTransport
-
-
 @dataclass
 class ValidationSession:
     """Complete validation session result."""

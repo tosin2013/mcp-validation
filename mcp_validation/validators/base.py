@@ -4,7 +4,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-
+from ..core.transport import JSONRPCTransport
 
 @dataclass
 class ValidationContext:
@@ -15,6 +15,7 @@ class ValidationContext:
     capabilities: Dict[str, Any]
     timeout: float = 30.0
     command_args: Optional[List[str]] = None
+    transport: Optional[JSONRPCTransport] = None
 
 
 @dataclass

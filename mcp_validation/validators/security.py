@@ -77,11 +77,12 @@ class SecurityValidator(BaseValidator):
                 # Parse scan results
                 tools_scanned, vulnerabilities = self._parse_scan_results(scan_results)
                 data["tools_scanned"] = tools_scanned
-                data["vulnerabilities_found"] = len(vulnerabilities)
-                data["vulnerability_types"] = list(
-                    {v.get("type", "unknown") for v in vulnerabilities}
-                )
-                data["risk_levels"] = list({v.get("severity", "unknown") for v in vulnerabilities})
+                if len(vulnerabilities) > 0:
+                    data["vulnerabilities_found"] = len(vulnerabilities)
+                    data["vulnerability_types"] = list(
+                        {v.get("type", "unknown") for v in vulnerabilities}
+                    )
+                    data["risk_levels"] = list({v.get("severity", "unknown") for v in vulnerabilities})
 
                 # Check vulnerability threshold
                 threshold = self.config.get("vulnerability_threshold", "high")
@@ -109,13 +110,11 @@ class SecurityValidator(BaseValidator):
 
         # Create temporary MCP configuration file for mcp-scan
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as config_file:
-            # Get command from context (need to reconstruct from process)
-            # For now, use a simplified approach
             config = {
                 "mcpServers": {
                     "test-server": {
-                        "command": "echo",  # Placeholder - this needs the actual command
-                        "args": ["MCP server placeholder"],
+                        "command": context.command_args[0],
+                        "args": context.command_args[1:],
                     }
                 }
             }
