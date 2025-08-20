@@ -52,6 +52,9 @@ class SecurityValidator(BaseValidator):
             "vulnerabilities_found": 0,
             "vulnerability_types": [],
             "risk_levels": [],
+            "issues_found": 0,
+            "issue_codes": [],
+            "issues": [],
         }
 
         if not self._check_mcp_scan_available():
@@ -75,7 +78,7 @@ class SecurityValidator(BaseValidator):
                 data["scan_file"] = scan_file
 
                 # Parse scan results
-                tools_scanned, vulnerabilities = self._parse_scan_results(scan_results)
+                tools_scanned, vulnerabilities, issues = self._parse_scan_results(scan_results)
                 data["tools_scanned"] = tools_scanned
                 if len(vulnerabilities) > 0:
                     data["vulnerabilities_found"] = len(vulnerabilities)
@@ -83,6 +86,12 @@ class SecurityValidator(BaseValidator):
                         {v.get("type", "unknown") for v in vulnerabilities}
                     )
                     data["risk_levels"] = list({v.get("severity", "unknown") for v in vulnerabilities})
+
+                # Add issues information
+                if len(issues) > 0:
+                    data["issues_found"] = len(issues)
+                    data["issue_codes"] = list({i.get("code", "unknown") for i in issues})
+                    data["issues"] = issues
 
                 # Check vulnerability threshold
                 threshold = self.config.get("vulnerability_threshold", "high")
@@ -181,12 +190,13 @@ class SecurityValidator(BaseValidator):
             except Exception:
                 pass
 
-    def _parse_scan_results(self, scan_results: Dict[str, Any]) -> Tuple[int, List[Dict[str, Any]]]:
+    def _parse_scan_results(self, scan_results: Dict[str, Any]) -> Tuple[int, List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Parse mcp-scan results to extract metrics."""
         tools_scanned = 0
         vulnerabilities = []
+        issues = []
 
-        for _config_path, config_data in scan_results.items():
+        for config_data in scan_results.values():
             if "servers" in config_data:
                 for server in config_data["servers"]:
                     signature = server.get("signature", {})
@@ -197,7 +207,11 @@ class SecurityValidator(BaseValidator):
                     server_vulns = signature.get("vulnerabilities", [])
                     vulnerabilities.extend(server_vulns)
 
-        return tools_scanned, vulnerabilities
+            # Extract issues array from config_data
+            config_issues = config_data.get("issues", [])
+            issues.extend(config_issues)
+
+        return tools_scanned, vulnerabilities, issues
 
     def _check_vulnerability_threshold(
         self, vulnerabilities: List[Dict[str, Any]], threshold: str
