@@ -93,6 +93,25 @@ class SecurityValidator(BaseValidator):
                     data["issue_codes"] = list({i.get("code", "unknown") for i in issues})
                     data["issues"] = issues
 
+                    # Promote critical codes from the issue list to errors.
+                    # TODO: What's critical or warning is still up for consideration.
+                    critical_code_prefixes = ("TF", "E")
+                    critical_codes = []
+                    regular_codes = []
+
+                    for code in data["issue_codes"]:
+                        if code.startswith(critical_code_prefixes):
+                            critical_codes.append(code)
+                            continue
+                        regular_codes.append(code)
+
+                    if len(critical_codes) > 0:
+                        errors.append(f"Found {len(critical_codes)} critical issues: {critical_codes}")
+
+                    # Those not in the critical_code list are considered warnings.
+                    if len(regular_codes) > 0:
+                        warnings.append(f"Found {len(regular_codes)} issues: {regular_codes}")
+
                 # Check vulnerability threshold
                 threshold = self.config.get("vulnerability_threshold", "high")
                 if self._check_vulnerability_threshold(vulnerabilities, threshold):
