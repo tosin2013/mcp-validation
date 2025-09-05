@@ -140,9 +140,12 @@ class ConsoleReporter:
         """Report security validation specific data."""
         tools_scanned = data.get("tools_scanned", 0)
         vulnerabilities_found = data.get("vulnerabilities_found", 0)
+        issues_found = data.get("issues_found", 0)
 
-        if vulnerabilities_found > 0:
-            print(f"    🔍 Security: {vulnerabilities_found} issues found in {tools_scanned} tools")
+        total_issues = vulnerabilities_found + issues_found
+
+        if total_issues > 0:
+            print(f"    🔍 Security: {total_issues} issues found in {tools_scanned} tools")
 
             # Show vulnerability types if available
             vuln_types = data.get("vulnerability_types", [])
@@ -150,7 +153,15 @@ class ConsoleReporter:
                 types_str = ", ".join(vuln_types[:3])
                 if len(vuln_types) > 3:
                     types_str += f" (and {len(vuln_types) - 3} more)"
-                print(f"        🚨 Issues: {types_str}")
+                print(f"        🚨 Vulnerabilities: {types_str}")
+
+            # Show issue codes if available
+            issue_codes = data.get("issue_codes", [])
+            if issue_codes:
+                codes_str = ", ".join(issue_codes[:3])
+                if len(issue_codes) > 3:
+                    codes_str += f" (and {len(issue_codes) - 3} more)"
+                print(f"        🚨 Issues: {codes_str}")
         else:
             print(f"    🔍 Security: No issues found in {tools_scanned} tools")
 

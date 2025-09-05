@@ -114,6 +114,9 @@ class JSONReporter:
                 "vulnerabilities_found": security_analysis.get("vulnerabilities_found", 0),
                 "vulnerability_types": security_analysis.get("vulnerability_types", []),
                 "risk_levels": security_analysis.get("risk_levels", []),
+                "issues_found": security_analysis.get("issues_found", 0),
+                "issue_codes": security_analysis.get("issue_codes", []),
+                "issues": security_analysis.get("issues", []),
                 "scan_file": security_analysis.get("scan_file"),
             },
             "repository_validation": {
