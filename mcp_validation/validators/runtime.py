@@ -7,8 +7,8 @@ import stat
 import time
 from typing import Any, Dict, List, Optional
 
-from .base import BaseValidator, ValidationContext, ValidatorResult
 from ..utils.debug import debug_log as _debug_log
+from .base import BaseValidator, ValidationContext, ValidatorResult
 
 
 def debug_log(message: str, level: str = "INFO") -> None:
@@ -73,7 +73,7 @@ class RuntimeExistsValidator(BaseValidator):
         try:
             # Use shutil.which to find the command
             runtime_path = shutil.which(runtime_command)
-            
+
             if runtime_path:
                 data["runtime_found"] = True
                 data["runtime_path"] = runtime_path
@@ -89,7 +89,9 @@ class RuntimeExistsValidator(BaseValidator):
                 all_locations = self._find_all_runtime_locations(runtime_command)
                 data["path_locations"] = all_locations
                 if len(all_locations) > 1:
-                    warnings.append(f"Multiple versions of {runtime_command} found in PATH: {', '.join(all_locations)}")
+                    warnings.append(
+                        f"Multiple versions of {runtime_command} found in PATH: {', '.join(all_locations)}"
+                    )
 
             else:
                 data["runtime_found"] = False
@@ -99,7 +101,9 @@ class RuntimeExistsValidator(BaseValidator):
                 # Provide helpful suggestions
                 suggestions = self._get_installation_suggestions(runtime_command)
                 if suggestions:
-                    warnings.append(f"Installation suggestions for {runtime_command}: {suggestions}")
+                    warnings.append(
+                        f"Installation suggestions for {runtime_command}: {suggestions}"
+                    )
 
         except Exception as e:
             debug_log(f"Runtime existence check failed with exception: {str(e)}", "ERROR")
@@ -108,7 +112,9 @@ class RuntimeExistsValidator(BaseValidator):
         execution_time = time.time() - start_time
         passed = len(errors) == 0
 
-        debug_log(f"Runtime existence validation completed: passed={passed}, found={data['runtime_found']}")
+        debug_log(
+            f"Runtime existence validation completed: passed={passed}, found={data['runtime_found']}"
+        )
 
         return ValidatorResult(
             validator_name=self.name,
@@ -121,21 +127,16 @@ class RuntimeExistsValidator(BaseValidator):
 
     async def _get_runtime_version(self, runtime_command: str) -> Optional[str]:
         """Try to get version information from the runtime."""
-        version_commands = [
-            ["--version"],
-            ["-v"],
-            ["version"],
-            ["-V"],
-            ["--help"]  # Last resort
-        ]
+        version_commands = [["--version"], ["-v"], ["version"], ["-V"], ["--help"]]  # Last resort
 
         for version_args in version_commands:
             try:
                 debug_log(f"Trying version command: {runtime_command} {' '.join(version_args)}")
                 process = await asyncio.create_subprocess_exec(
-                    runtime_command, *version_args,
+                    runtime_command,
+                    *version_args,
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
                 )
 
                 stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5.0)
@@ -145,10 +146,10 @@ class RuntimeExistsValidator(BaseValidator):
                     output = stdout.decode().strip()
                     if not output:
                         output = stderr.decode().strip()
-                    
+
                     if output:
                         # Take first line and limit length
-                        version_line = output.split('\n')[0][:100]
+                        version_line = output.split("\n")[0][:100]
                         debug_log(f"Got version info: {version_line}")
                         return version_line
 
@@ -163,28 +164,28 @@ class RuntimeExistsValidator(BaseValidator):
         """Find all locations of the runtime command in PATH."""
         locations = []
         system_path = os.environ.get("PATH", "")
-        
+
         for path_dir in system_path.split(os.pathsep):
             if not path_dir:
                 continue
-                
+
             try:
                 potential_path = os.path.join(path_dir, runtime_command)
-                
+
                 # Check for executable file
                 if os.path.isfile(potential_path) and os.access(potential_path, os.X_OK):
                     locations.append(potential_path)
-                    
+
                 # Also check with common extensions on Windows
-                if os.name == 'nt':
-                    for ext in ['.exe', '.cmd', '.bat']:
+                if os.name == "nt":
+                    for ext in [".exe", ".cmd", ".bat"]:
                         ext_path = potential_path + ext
                         if os.path.isfile(ext_path) and os.access(ext_path, os.X_OK):
                             locations.append(ext_path)
-                            
+
             except Exception:
                 continue
-                
+
         return locations
 
     def _get_installation_suggestions(self, runtime_command: str) -> Optional[str]:
@@ -204,7 +205,7 @@ class RuntimeExistsValidator(BaseValidator):
             "rust": "Install Rust with: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
             "cargo": "Install Rust which includes Cargo",
         }
-        
+
         return suggestions.get(runtime_command.lower())
 
 
@@ -277,10 +278,12 @@ class RuntimeExecutableValidator(BaseValidator):
             data["permission_details"] = permission_check
 
             if not permission_check["is_executable"]:
-                errors.append(f"Runtime command '{runtime_command}' at {runtime_path} is not executable by current user")
+                errors.append(
+                    f"Runtime command '{runtime_command}' at {runtime_path} is not executable by current user"
+                )
             else:
                 data["executable_check_passed"] = True
-                debug_log(f"Runtime command has proper execute permissions")
+                debug_log("Runtime command has proper execute permissions")
 
                 # Test actual execution
                 execution_result = await self._test_runtime_execution(runtime_command)
@@ -290,7 +293,7 @@ class RuntimeExecutableValidator(BaseValidator):
                     error_msg = execution_result.get("error", "Unknown execution error")
                     errors.append(f"Runtime command execution test failed: {error_msg}")
                 else:
-                    debug_log(f"Runtime command executed successfully")
+                    debug_log("Runtime command executed successfully")
 
         except Exception as e:
             debug_log(f"Runtime executable validation failed with exception: {str(e)}", "ERROR")
@@ -334,16 +337,16 @@ class RuntimeExecutableValidator(BaseValidator):
             if os.path.exists(file_path):
                 result["exists"] = True
                 result["is_file"] = os.path.isfile(file_path)
-                
+
                 # Check if file is executable by current user
                 result["is_executable"] = os.access(file_path, os.X_OK)
-                
+
                 # Get detailed file mode information
                 file_stat = os.stat(file_path)
                 file_mode = file_stat.st_mode
                 result["file_mode"] = file_mode
                 result["file_mode_octal"] = oct(stat.S_IMODE(file_mode))
-                
+
                 # Check individual permission bits
                 result["owner_readable"] = bool(file_mode & stat.S_IRUSR)
                 result["owner_writable"] = bool(file_mode & stat.S_IWUSR)
@@ -400,22 +403,23 @@ class RuntimeExecutableValidator(BaseValidator):
             test_start = time.time()
 
             process = await asyncio.create_subprocess_exec(
-                runtime_command, *test_args,
+                runtime_command,
+                *test_args,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
 
             timeout = self.config.get("execution_timeout", 10.0)
             stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
-            
+
             test_end = time.time()
             result["test_execution_time"] = round(test_end - test_start, 3)
             result["test_exit_code"] = process.returncode
 
             # Decode output
-            stdout_text = stdout.decode('utf-8', errors='ignore').strip()
-            stderr_text = stderr.decode('utf-8', errors='ignore').strip()
-            
+            stdout_text = stdout.decode("utf-8", errors="ignore").strip()
+            stderr_text = stderr.decode("utf-8", errors="ignore").strip()
+
             result["test_output"] = stdout_text[:500] if stdout_text else None  # Limit output size
             result["test_error_output"] = stderr_text[:500] if stderr_text else None
 
@@ -429,7 +433,7 @@ class RuntimeExecutableValidator(BaseValidator):
 
         except asyncio.TimeoutError:
             result["error"] = f"Execution test timed out after {timeout} seconds"
-            debug_log(f"Runtime execution test timed out", "ERROR")
+            debug_log("Runtime execution test timed out", "ERROR")
         except Exception as e:
             result["error"] = f"Execution test failed: {str(e)}"
             debug_log(f"Runtime execution test failed with exception: {str(e)}", "ERROR")

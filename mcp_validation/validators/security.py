@@ -85,7 +85,9 @@ class SecurityValidator(BaseValidator):
                     data["vulnerability_types"] = list(
                         {v.get("type", "unknown") for v in vulnerabilities}
                     )
-                    data["risk_levels"] = list({v.get("severity", "unknown") for v in vulnerabilities})
+                    data["risk_levels"] = list(
+                        {v.get("severity", "unknown") for v in vulnerabilities}
+                    )
 
                 # Add issues information
                 if len(issues) > 0:
@@ -190,7 +192,9 @@ class SecurityValidator(BaseValidator):
             except Exception:
                 pass
 
-    def _parse_scan_results(self, scan_results: Dict[str, Any]) -> Tuple[int, List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def _parse_scan_results(
+        self, scan_results: Dict[str, Any]
+    ) -> Tuple[int, List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Parse mcp-scan results to extract metrics."""
         tools_scanned = 0
         vulnerabilities = []

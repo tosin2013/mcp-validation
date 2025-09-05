@@ -6,8 +6,8 @@ import re
 import time
 from typing import Any, Dict, List, Optional
 
-from .base import BaseValidator, ValidationContext, ValidatorResult
 from ..utils.debug import debug_log as _debug_log
+from .base import BaseValidator, ValidationContext, ValidatorResult
 
 
 def debug_log(message: str, level: str = "INFO") -> None:
@@ -32,47 +32,59 @@ class ContainerUBIValidator(BaseValidator):
 
     def is_applicable(self, context: ValidationContext) -> bool:
         """Only applicable for container runtime commands."""
-        return (
-            self.enabled 
-            and self._is_container_command(context.command_args)
-        )
+        return self.enabled and self._is_container_command(context.command_args)
 
     def _is_container_command(self, command_args: List[str]) -> bool:
         """Check if command is a container runtime command."""
         if not command_args:
             return False
-        
+
         first_cmd = command_args[0]
         if first_cmd in ["docker", "podman"]:
             # Check if it's a run command with an image
             if len(command_args) >= 3 and command_args[1] == "run":
                 return True
-        
+
         return False
 
     def _extract_image_name(self, command_args: List[str]) -> Optional[str]:
         """Extract container image name from command arguments."""
         if not self._is_container_command(command_args):
             return None
-        
+
         # Find the image name in docker/podman run command
         # Format: docker/podman run [options] IMAGE [command]
-        runtime = command_args[0]  # docker or podman
+        _ = command_args[0]  # docker or podman
         if len(command_args) < 3 or command_args[1] != "run":
             return None
-        
+
         # Options that take values
         options_with_values = {
-            "-v", "--volume", "-e", "--env", "-p", "--port", "--name", 
-            "-w", "--workdir", "-u", "--user", "--entrypoint", "--hostname",
-            "--restart", "--memory", "--cpus", "--network", "--label"
+            "-v",
+            "--volume",
+            "-e",
+            "--env",
+            "-p",
+            "--port",
+            "--name",
+            "-w",
+            "--workdir",
+            "-u",
+            "--user",
+            "--entrypoint",
+            "--hostname",
+            "--restart",
+            "--memory",
+            "--cpus",
+            "--network",
+            "--label",
         }
-        
+
         # Skip run and look for the image (skip options that start with -)
         i = 2
         while i < len(command_args):
             arg = command_args[i]
-            
+
             # Skip options and their values
             if arg.startswith("-"):
                 # Check if this option takes a value
@@ -91,7 +103,7 @@ class ContainerUBIValidator(BaseValidator):
             else:
                 # First non-option argument should be the image
                 return arg
-            
+
         return None
 
     async def validate(self, context: ValidationContext) -> ValidatorResult:
@@ -113,7 +125,7 @@ class ContainerUBIValidator(BaseValidator):
         # Extract runtime and image
         runtime = context.command_args[0] if context.command_args else None
         image_name = self._extract_image_name(context.command_args)
-        
+
         data["container_runtime"] = runtime
         data["image_name"] = image_name
 
@@ -157,7 +169,7 @@ class ContainerUBIValidator(BaseValidator):
                 # Check if we should warn or fail for non-UBI images
                 warn_only = self.config.get("warn_only_for_non_ubi", True)
                 message = f"Container image '{image_name}' is not based on a UBI (Universal Base Image). Base image: {base_image}. Consider using a UBI-based image for better security and support."
-                
+
                 if warn_only:
                     warnings.append(message)
                 else:
@@ -165,15 +177,21 @@ class ContainerUBIValidator(BaseValidator):
             else:
                 rhel_version = data.get("rhel_version")
                 debug_log(f"UBI-based image detected with RHEL version: {rhel_version}")
-                
+
                 if rhel_version == "9":
-                    warnings.append(f"Container uses RHEL 9 UBI base image. Consider upgrading to RHEL 10 for latest features and security updates.")
+                    warnings.append(
+                        "Container uses RHEL 9 UBI base image. Consider upgrading to RHEL 10 for latest features and security updates."
+                    )
                 elif rhel_version == "10":
                     debug_log("Container uses recommended RHEL 10 UBI base image")
                 elif rhel_version:
-                    warnings.append(f"Container uses RHEL {rhel_version} UBI base image. RHEL 9 or 10 are recommended.")
+                    warnings.append(
+                        f"Container uses RHEL {rhel_version} UBI base image. RHEL 9 or 10 are recommended."
+                    )
                 else:
-                    warnings.append("Container is UBI-based but RHEL version could not be determined")
+                    warnings.append(
+                        "Container is UBI-based but RHEL version could not be determined"
+                    )
 
         except Exception as e:
             debug_log(f"UBI validation failed with exception: {str(e)}", "ERROR")
@@ -182,7 +200,9 @@ class ContainerUBIValidator(BaseValidator):
         execution_time = time.time() - start_time
         passed = len(errors) == 0
 
-        debug_log(f"UBI validation completed: passed={passed}, is_ubi_based={data.get('is_ubi_based', False)}")
+        debug_log(
+            f"UBI validation completed: passed={passed}, is_ubi_based={data.get('is_ubi_based', False)}"
+        )
 
         return ValidatorResult(
             validator_name=self.name,
@@ -205,22 +225,26 @@ class ContainerUBIValidator(BaseValidator):
 
         try:
             debug_log(f"Inspecting image with {runtime}: {image_name}")
-            
+
             # Try to pull the image first (if it's not local)
             pull_process = await asyncio.create_subprocess_exec(
-                runtime, "pull", image_name,
+                runtime,
+                "pull",
+                image_name,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
-            
+
             await asyncio.wait_for(pull_process.communicate(), timeout=60.0)
             debug_log(f"Image pull completed with exit code: {pull_process.returncode}")
 
             # Inspect the image
             inspect_process = await asyncio.create_subprocess_exec(
-                runtime, "inspect", image_name,
+                runtime,
+                "inspect",
+                image_name,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
 
             stdout, stderr = await asyncio.wait_for(inspect_process.communicate(), timeout=30.0)
@@ -230,14 +254,18 @@ class ContainerUBIValidator(BaseValidator):
                 if inspect_data and len(inspect_data) > 0:
                     image_data = inspect_data[0]
                     result["image_inspected"] = True
-                    result["inspection_output"] = json.dumps(image_data, indent=2)[:2000]  # Limit size
-                    
+                    result["inspection_output"] = json.dumps(image_data, indent=2)[
+                        :2000
+                    ]  # Limit size
+
                     # Extract labels and environment
                     config = image_data.get("Config", {})
                     result["image_labels"] = config.get("Labels", {}) or {}
                     result["image_env"] = config.get("Env", []) or []
-                    
-                    debug_log(f"Image inspection successful, found {len(result['image_labels'])} labels")
+
+                    debug_log(
+                        f"Image inspection successful, found {len(result['image_labels'])} labels"
+                    )
                 else:
                     result["error"] = "Empty inspection result"
             else:
@@ -273,18 +301,18 @@ class ContainerUBIValidator(BaseValidator):
         env_vars = inspection_result.get("image_env", [])
 
         # Check labels for UBI indicators
-        ubi_indicators = [
+        _ = [
             "com.redhat.component",
             "io.openshift.tags",
             "release",
             "distribution-scope",
             "name",
             "summary",
-            "description"
+            "description",
         ]
 
         debug_log(f"Checking {len(labels)} labels for UBI indicators")
-        
+
         for label, value in labels.items():
             if any(indicator in label.lower() for indicator in ["redhat", "ubi", "rhel"]):
                 result["ubi_details"][label] = value
@@ -306,11 +334,11 @@ class ContainerUBIValidator(BaseValidator):
         ubi_patterns = [
             r"ubi\d*",  # ubi8, ubi9, ubi10, etc.
             r"universal.base.image",
-            r"red.hat.universal.base.image"
+            r"red.hat.universal.base.image",
         ]
 
         all_text = f"{component} {name} {summary} {description}".lower()
-        
+
         for pattern in ubi_patterns:
             if re.search(pattern, all_text):
                 result["is_ubi_based"] = True
@@ -318,11 +346,7 @@ class ContainerUBIValidator(BaseValidator):
                 break
 
         # Extract RHEL version
-        version_patterns = [
-            r"rhel\s*(\d+)",
-            r"ubi(\d+)",
-            r"red.hat.enterprise.linux.(\d+)"
-        ]
+        version_patterns = [r"rhel\s*(\d+)", r"ubi(\d+)", r"red.hat.enterprise.linux.(\d+)"]
 
         for pattern in version_patterns:
             match = re.search(pattern, all_text)
@@ -339,7 +363,9 @@ class ContainerUBIValidator(BaseValidator):
                     result["is_ubi_based"] = True
                     debug_log(f"UBI indicator found in environment: {env_var}")
 
-        debug_log(f"UBI compliance check result: is_ubi_based={result['is_ubi_based']}, rhel_version={result['rhel_version']}")
+        debug_log(
+            f"UBI compliance check result: is_ubi_based={result['is_ubi_based']}, rhel_version={result['rhel_version']}"
+        )
         return result
 
 
@@ -360,47 +386,59 @@ class ContainerVersionValidator(BaseValidator):
 
     def is_applicable(self, context: ValidationContext) -> bool:
         """Only applicable for container runtime commands."""
-        return (
-            self.enabled 
-            and self._is_container_command(context.command_args)
-        )
+        return self.enabled and self._is_container_command(context.command_args)
 
     def _is_container_command(self, command_args: List[str]) -> bool:
         """Check if command is a container runtime command."""
         if not command_args:
             return False
-        
+
         first_cmd = command_args[0]
         if first_cmd in ["docker", "podman"]:
             # Check if it's a run command with an image
             if len(command_args) >= 3 and command_args[1] == "run":
                 return True
-        
+
         return False
 
     def _extract_image_name(self, command_args: List[str]) -> Optional[str]:
         """Extract container image name from command arguments."""
         if not self._is_container_command(command_args):
             return None
-        
+
         # Find the image name in docker/podman run command
         # Format: docker/podman run [options] IMAGE [command]
-        runtime = command_args[0]  # docker or podman
+        _ = command_args[0]  # docker or podman
         if len(command_args) < 3 or command_args[1] != "run":
             return None
-        
+
         # Options that take values
         options_with_values = {
-            "-v", "--volume", "-e", "--env", "-p", "--port", "--name", 
-            "-w", "--workdir", "-u", "--user", "--entrypoint", "--hostname",
-            "--restart", "--memory", "--cpus", "--network", "--label"
+            "-v",
+            "--volume",
+            "-e",
+            "--env",
+            "-p",
+            "--port",
+            "--name",
+            "-w",
+            "--workdir",
+            "-u",
+            "--user",
+            "--entrypoint",
+            "--hostname",
+            "--restart",
+            "--memory",
+            "--cpus",
+            "--network",
+            "--label",
         }
-        
+
         # Skip run and look for the image (skip options that start with -)
         i = 2
         while i < len(command_args):
             arg = command_args[i]
-            
+
             # Skip options and their values
             if arg.startswith("-"):
                 # Check if this option takes a value
@@ -419,7 +457,7 @@ class ContainerVersionValidator(BaseValidator):
             else:
                 # First non-option argument should be the image
                 return arg
-            
+
         return None
 
     async def validate(self, context: ValidationContext) -> ValidatorResult:
@@ -440,7 +478,7 @@ class ContainerVersionValidator(BaseValidator):
         # Extract runtime and image
         runtime = context.command_args[0] if context.command_args else None
         image_name = self._extract_image_name(context.command_args)
-        
+
         data["container_runtime"] = runtime
         data["image_name"] = image_name
 
@@ -467,19 +505,25 @@ class ContainerVersionValidator(BaseValidator):
             data["using_latest"] = current_tag in ["latest", ""]
 
             if data["using_latest"]:
-                debug_log("Image is using 'latest' tag - this is considered best practice for latest version")
+                debug_log(
+                    "Image is using 'latest' tag - this is considered best practice for latest version"
+                )
             else:
                 debug_log(f"Image is using specific tag: {current_tag}")
-                
+
                 # Try to check available tags (best effort)
                 tag_info = await self._check_available_tags(runtime, image_name, data["image_tag"])
                 data.update(tag_info)
 
                 if data.get("tag_check_performed", False):
                     if not data.get("using_latest_available", True):
-                        warnings.append(f"Image tag '{current_tag}' may not be the latest available version. Consider using 'latest' tag or check for newer versions.")
+                        warnings.append(
+                            f"Image tag '{current_tag}' may not be the latest available version. Consider using 'latest' tag or check for newer versions."
+                        )
                 else:
-                    warnings.append(f"Could not verify if tag '{current_tag}' is the latest available version. Consider using 'latest' tag for automatic updates.")
+                    warnings.append(
+                        f"Could not verify if tag '{current_tag}' is the latest available version. Consider using 'latest' tag for automatic updates."
+                    )
 
         except Exception as e:
             debug_log(f"Version validation failed with exception: {str(e)}", "ERROR")
@@ -488,7 +532,9 @@ class ContainerVersionValidator(BaseValidator):
         execution_time = time.time() - start_time
         passed = len(errors) == 0
 
-        debug_log(f"Version validation completed: passed={passed}, using_latest={data.get('using_latest', False)}")
+        debug_log(
+            f"Version validation completed: passed={passed}, using_latest={data.get('using_latest', False)}"
+        )
 
         return ValidatorResult(
             validator_name=self.name,
@@ -527,10 +573,14 @@ class ContainerVersionValidator(BaseValidator):
         else:
             result["image_repository"] = image_part
 
-        debug_log(f"Parsed image: registry={result['image_registry']}, repo={result['image_repository']}, tag={result['image_tag']}")
+        debug_log(
+            f"Parsed image: registry={result['image_registry']}, repo={result['image_repository']}, tag={result['image_tag']}"
+        )
         return result
 
-    async def _check_available_tags(self, runtime: str, image_name: str, current_tag: str) -> Dict[str, Any]:
+    async def _check_available_tags(
+        self, runtime: str, image_name: str, current_tag: str
+    ) -> Dict[str, Any]:
         """Check available tags for the image (best effort)."""
         result = {
             "tag_check_performed": False,
@@ -542,51 +592,54 @@ class ContainerVersionValidator(BaseValidator):
 
         try:
             debug_log(f"Attempting to check available tags for: {image_name}")
-            
+
             # Note: This is a simplified approach. In practice, you might want to:
             # 1. Use registry API calls for more accurate tag information
             # 2. Implement specific logic for different registries (Docker Hub, Quay, etc.)
             # 3. Handle authentication for private registries
-            
+
             # For now, we'll do a basic check by trying to pull some common "latest" variants
             latest_variants = ["latest", "stable", "current"]
-            
+
             for variant in latest_variants:
                 if variant == current_tag:
                     result["using_latest_available"] = True
                     result["latest_tag"] = variant
                     break
-                    
+
                 # Try to check if variant exists (this is a simplified approach)
                 try:
                     variant_image = f"{image_name.split(':')[0]}:{variant}"
                     debug_log(f"Checking if tag exists: {variant}")
-                    
+
                     # Use a quick manifest check (timeout quickly)
                     check_process = await asyncio.create_subprocess_exec(
-                        runtime, "manifest", "inspect", variant_image,
+                        runtime,
+                        "manifest",
+                        "inspect",
+                        variant_image,
                         stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
+                        stderr=asyncio.subprocess.PIPE,
                     )
-                    
+
                     await asyncio.wait_for(check_process.communicate(), timeout=10.0)
-                    
+
                     if check_process.returncode == 0:
                         result["available_tags"].append(variant)
                         if not result["latest_tag"]:
                             result["latest_tag"] = variant
                         debug_log(f"Found available tag: {variant}")
-                        
+
                 except (asyncio.TimeoutError, Exception):
                     # Ignore errors for individual tag checks
                     continue
-            
+
             result["tag_check_performed"] = True
-            
+
             # If we found any tags and current tag is not among them, suggest update
             if result["available_tags"] and current_tag not in result["available_tags"]:
                 result["using_latest_available"] = False
-                
+
         except Exception as e:
             result["tag_check_error"] = str(e)
             debug_log(f"Tag availability check failed: {str(e)}", "ERROR")

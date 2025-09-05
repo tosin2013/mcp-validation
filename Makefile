@@ -80,23 +80,17 @@ debug-test:
 # Pre-commit workflow
 pre-commit:
 	@echo "Running pre-commit workflow..."
-	@echo "1. Formatting code..."
-	uv run --extra dev black mcp_validation/
-	@echo "2. Fixing lint issues..."
-	uv run --extra dev ruff check --fix mcp_validation/
-	@echo "3. Running tests..."
-	uv run --extra dev pytest tests/ -v
+	@$(MAKE) format
+	@$(MAKE) lint-fix
+	@$(MAKE) test
 	@echo "Pre-commit workflow completed successfully!"
 
 # CI-like checks (no automatic fixes)
 ci:
 	@echo "Running CI checks..."
-	@echo "1. Checking code formatting..."
-	uv run --extra dev black --check mcp_validation/
-	@echo "2. Checking lint issues..."
-	uv run --extra dev ruff check mcp_validation/
-	@echo "3. Running tests..."
-	uv run --extra dev pytest tests/ -v
+	@$(MAKE) check
+	@$(MAKE) lint
+	@$(MAKE) test
 	@echo "All CI checks passed!"
 
 # Cleanup

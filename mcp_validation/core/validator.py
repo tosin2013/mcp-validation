@@ -7,13 +7,12 @@ from typing import Any, Dict, List, Optional, Type
 
 from ..config.settings import ConfigurationManager, ValidationProfile
 from ..utils.debug import (
-    log_execution_start, 
-    log_execution_step, 
     log_execution_result,
-    log_validator_progress,
+    log_execution_start,
+    log_execution_step,
     log_validation_summary,
-    debug_log,
-    set_debug_enabled
+    log_validator_progress,
+    set_debug_enabled,
 )
 from ..validators.base import BaseValidator, ValidationContext, ValidatorResult
 from .result import ValidationSession
@@ -24,26 +23,41 @@ def _inject_container_env_vars(command_args: List[str], env_vars: Dict[str, str]
     """Inject environment variables as -e options for container commands."""
     if not env_vars or len(command_args) < 2:
         return command_args
-    
+
     # Check if this is a container run command
-    if command_args[0] not in ['docker', 'podman'] or command_args[1] != 'run':
+    if command_args[0] not in ["docker", "podman"] or command_args[1] != "run":
         return command_args
-    
+
     # Find insertion point (after 'run' but before the image name)
     # We need to insert after options but before the image
     insertion_point = 2
-    
+
     # Skip existing options to find where image starts
     options_with_values = {
-        "-v", "--volume", "-e", "--env", "-p", "--port", "--name", 
-        "-w", "--workdir", "-u", "--user", "--entrypoint", "--hostname",
-        "--restart", "--memory", "--cpus", "--network", "--label"
+        "-v",
+        "--volume",
+        "-e",
+        "--env",
+        "-p",
+        "--port",
+        "--name",
+        "-w",
+        "--workdir",
+        "-u",
+        "--user",
+        "--entrypoint",
+        "--hostname",
+        "--restart",
+        "--memory",
+        "--cpus",
+        "--network",
+        "--label",
     }
-    
+
     i = 2
     while i < len(command_args):
         arg = command_args[i]
-        
+
         if arg.startswith("-"):
             if arg in options_with_values:
                 # Option with separate value
@@ -51,7 +65,7 @@ def _inject_container_env_vars(command_args: List[str], env_vars: Dict[str, str]
                 insertion_point = i
             elif "=" in arg:
                 # Option with value in same argument
-                i += 1  
+                i += 1
                 insertion_point = i
             else:
                 # Flag option
@@ -60,17 +74,17 @@ def _inject_container_env_vars(command_args: List[str], env_vars: Dict[str, str]
         else:
             # Found the image name
             break
-    
+
     # Build new command with environment variables injected
     new_command = command_args[:insertion_point]
-    
+
     # Add environment variables as -e options
     for key, value in env_vars.items():
         new_command.extend(["-e", f"{key}={value}"])
-    
+
     # Add the rest of the command (image and arguments)
     new_command.extend(command_args[insertion_point:])
-    
+
     return new_command
 
 
@@ -115,27 +129,27 @@ class MCPValidationOrchestrator:
         # Import and register built-in validators
         try:
             from ..validators.capabilities import CapabilitiesValidator
+            from ..validators.container import ContainerUBIValidator, ContainerVersionValidator
             from ..validators.errors import ErrorComplianceValidator
             from ..validators.ping import PingValidator
             from ..validators.protocol import ProtocolValidator
             from ..validators.registry import RegistryValidator
+            from ..validators.repo import LicenseValidator, RepoAvailabilityValidator
+            from ..validators.runtime import RuntimeExecutableValidator, RuntimeExistsValidator
             from ..validators.security import SecurityValidator
-            from ..validators.repo import RepoAvailabilityValidator, LicenseValidator
-            from ..validators.runtime import RuntimeExistsValidator, RuntimeExecutableValidator
-            from ..validators.container import ContainerUBIValidator, ContainerVersionValidator
 
             # Register repository validators first (they have no dependencies)
             self.registry.register(RepoAvailabilityValidator)
             self.registry.register(LicenseValidator)
-            
+
             # Register runtime validators (run after repo but before others)
             self.registry.register(RuntimeExistsValidator)
             self.registry.register(RuntimeExecutableValidator)
-            
+
             # Register container validators (run after runtime validators)
             self.registry.register(ContainerUBIValidator)
             self.registry.register(ContainerVersionValidator)
-            
+
             # Register other validators
             self.registry.register(ProtocolValidator)
             self.registry.register(CapabilitiesValidator)
@@ -162,7 +176,7 @@ class MCPValidationOrchestrator:
 
         # Set debug state based on CLI flag
         set_debug_enabled(debug)
-        
+
         start_time = time.time()
         errors = []
         warnings = []
@@ -180,21 +194,30 @@ class MCPValidationOrchestrator:
         try:
             # Log execution start with full context
             log_execution_start(command_args, env_vars)
-            
+
             # Start MCP server process
             log_execution_step("Preparing environment")
             env = os.environ.copy()
-            
+
             # For container commands, inject environment variables as -e options
             final_command_args = command_args
-            if env_vars and len(command_args) >= 2 and command_args[0] in ['docker', 'podman'] and command_args[1] == 'run':
+            if (
+                env_vars
+                and len(command_args) >= 2
+                and command_args[0] in ["docker", "podman"]
+                and command_args[1] == "run"
+            ):
                 final_command_args = _inject_container_env_vars(command_args, env_vars)
-                log_execution_step(f"Injected {len(env_vars)} environment variables as -e options for container")
+                log_execution_step(
+                    f"Injected {len(env_vars)} environment variables as -e options for container"
+                )
                 log_execution_step("Modified command", f"Command: {' '.join(final_command_args)}")
             elif env_vars:
                 # For non-container commands, use environment variables in subprocess environment
                 env.update(env_vars)
-                log_execution_step(f"Added {len(env_vars)} environment variables to subprocess environment")
+                log_execution_step(
+                    f"Added {len(env_vars)} environment variables to subprocess environment"
+                )
 
             log_execution_step("Creating subprocess", f"Command: {' '.join(final_command_args)}")
             process = await asyncio.create_subprocess_exec(
@@ -204,7 +227,7 @@ class MCPValidationOrchestrator:
                 stderr=asyncio.subprocess.PIPE,
                 env=env,
             )
-            
+
             log_execution_step("Process started", f"PID: {process.pid}")
 
             # Create transport and validation context
@@ -222,12 +245,15 @@ class MCPValidationOrchestrator:
             # Create and configure validators
             log_execution_step("Creating validators", f"Profile: {profile.name}")
             validators = self._create_validators(profile)
-            log_execution_step(f"Configured {len(validators)} validators", 
-                             f"Names: {[v.name for v in validators]}")
+            log_execution_step(
+                f"Configured {len(validators)} validators", f"Names: {[v.name for v in validators]}"
+            )
 
             # Execute validators
-            log_execution_step("Starting validation", 
-                             f"Mode: {'parallel' if profile.parallel_execution else 'sequential'}")
+            log_execution_step(
+                "Starting validation",
+                f"Mode: {'parallel' if profile.parallel_execution else 'sequential'}",
+            )
             if profile.parallel_execution:
                 validator_results = await self._execute_validators_parallel(
                     validators, context, profile
@@ -256,7 +282,7 @@ class MCPValidationOrchestrator:
             warnings.extend(result.warnings)
 
         execution_time = time.time() - start_time
-        
+
         # Log validation summary
         passed_count = sum(1 for r in validator_results if r.passed)
         failed_count = len(validator_results) - passed_count
@@ -354,7 +380,9 @@ class MCPValidationOrchestrator:
 
         for i, validator in enumerate(validators, 1):
             if not validator.is_applicable(context):
-                log_validator_progress(validator.name, "SKIPPED", "Not applicable for current context")
+                log_validator_progress(
+                    validator.name, "SKIPPED", "Not applicable for current context"
+                )
                 continue
 
             log_validator_progress(validator.name, "STARTING", f"({i}/{total_validators})")
@@ -363,7 +391,7 @@ class MCPValidationOrchestrator:
             try:
                 result = await validator.validate(context)
                 results.append(result)
-                
+
                 validator_execution_time = time.time() - validator_start_time
                 status = "PASSED" if result.passed else "FAILED"
                 details = f"Time: {validator_execution_time:.2f}s"
@@ -371,15 +399,18 @@ class MCPValidationOrchestrator:
                     details += f", Errors: {len(result.errors)}"
                 if result.warnings:
                     details += f", Warnings: {len(result.warnings)}"
-                
+
                 log_validator_progress(validator.name, status, details)
 
                 # Update context with results (for dependent validators)
                 if validator.name == "protocol":
                     context.server_info.update(result.data.get("server_info", {}))
                     context.capabilities.update(result.data.get("capabilities", {}))
-                    log_validator_progress(validator.name, "CONTEXT_UPDATED", 
-                                         "Server info and capabilities stored for dependent validators")
+                    log_validator_progress(
+                        validator.name,
+                        "CONTEXT_UPDATED",
+                        "Server info and capabilities stored for dependent validators",
+                    )
 
                 # Stop on required validator failure if configured
                 if (
@@ -387,16 +418,22 @@ class MCPValidationOrchestrator:
                     and validator.config.get("required")
                     and not result.passed
                 ):
-                    log_validator_progress(validator.name, "STOPPING", 
-                                         "Required validator failed and fail-fast is enabled")
+                    log_validator_progress(
+                        validator.name,
+                        "STOPPING",
+                        "Required validator failed and fail-fast is enabled",
+                    )
                     break
 
             except Exception as e:
                 validator_execution_time = time.time() - validator_start_time
                 error_msg = f"Validator execution failed: {str(e)}"
-                log_validator_progress(validator.name, "ERROR", 
-                                     f"Exception after {validator_execution_time:.2f}s: {str(e)}")
-                
+                log_validator_progress(
+                    validator.name,
+                    "ERROR",
+                    f"Exception after {validator_execution_time:.2f}s: {str(e)}",
+                )
+
                 error_result = ValidatorResult(
                     validator_name=validator.name,
                     passed=False,
@@ -408,8 +445,11 @@ class MCPValidationOrchestrator:
                 results.append(error_result)
 
                 if not profile.continue_on_failure and validator.config.get("required"):
-                    log_validator_progress(validator.name, "STOPPING", 
-                                         "Required validator failed with exception and fail-fast is enabled")
+                    log_validator_progress(
+                        validator.name,
+                        "STOPPING",
+                        "Required validator failed with exception and fail-fast is enabled",
+                    )
                     break
 
         return results

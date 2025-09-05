@@ -1,7 +1,6 @@
 """Package registry validator for MCP validation."""
 
 import asyncio
-import os
 import re
 import time
 from dataclasses import dataclass
@@ -9,8 +8,8 @@ from typing import Any, Dict, List, Optional, Protocol
 
 import aiohttp
 
-from .base import BaseValidator, ValidationContext, ValidatorResult
 from ..utils.debug import debug_log as _debug_log
+from .base import BaseValidator, ValidationContext, ValidatorResult
 
 
 def debug_log(message: str, level: str = "INFO") -> None:
