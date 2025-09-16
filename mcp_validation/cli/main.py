@@ -26,36 +26,52 @@ def detect_runtime_command(command_args: List[str]) -> Optional[str]:
     """Auto-detect runtime command from MCP server command arguments."""
     if not command_args:
         return None
-    
+
     first_command = command_args[0]
-    
+
     # Direct runtime commands
     runtime_commands = {
-        'uv', 'docker', 'podman', 'npx', 'node', 'python', 'python3', 
-        'pip', 'java', 'mvn', 'gradle', 'go', 'cargo', 'rust'
+        "uv",
+        "docker",
+        "podman",
+        "npx",
+        "node",
+        "python",
+        "python3",
+        "pip",
+        "java",
+        "mvn",
+        "gradle",
+        "go",
+        "cargo",
+        "rust",
     }
-    
+
     if first_command in runtime_commands:
         return first_command
-    
+
     # Check for common patterns
-    if first_command.endswith('python') or first_command.endswith('python3'):
-        return 'python3' if 'python3' in first_command else 'python'
-    
-    if first_command.endswith('node'):
-        return 'node'
-    
+    if first_command.endswith("python") or first_command.endswith("python3"):
+        return "python3" if "python3" in first_command else "python"
+
+    if first_command.endswith("node"):
+        return "node"
+
     # Check for shebang or script patterns
-    if first_command.startswith('./') or first_command.endswith('.py'):
-        return 'python3'  # Assume Python for .py files
-    
-    if first_command.endswith('.js') or first_command.endswith('.mjs'):
-        return 'node'
-    
+    if first_command.startswith("./") or first_command.endswith(".py"):
+        return "python3"  # Assume Python for .py files
+
+    if first_command.endswith(".js") or first_command.endswith(".mjs"):
+        return "node"
+
     # Check for container run patterns
-    if len(command_args) >= 2 and first_command in ['docker', 'podman'] and command_args[1] == 'run':
+    if (
+        len(command_args) >= 2
+        and first_command in ["docker", "podman"]
+        and command_args[1] == "run"
+    ):
         return first_command
-    
+
     return None
 
 
@@ -63,11 +79,8 @@ def is_container_runtime_command(command_args: List[str]) -> bool:
     """Check if command is a container runtime command (docker/podman run)."""
     if not command_args or len(command_args) < 3:
         return False
-    
-    return (
-        command_args[0] in ['docker', 'podman'] 
-        and command_args[1] == 'run'
-    )
+
+    return command_args[0] in ["docker", "podman"] and command_args[1] == "run"
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -167,7 +180,9 @@ Environment Variables:
 
     # Runtime validation options
     parser.add_argument(
-        "--runtime-command", metavar="COMMAND", help="Runtime command to validate (e.g., uv, docker, npx). If not specified, will be auto-detected from the MCP server command."
+        "--runtime-command",
+        metavar="COMMAND",
+        help="Runtime command to validate (e.g., uv, docker, npx). If not specified, will be auto-detected from the MCP server command.",
     )
 
     return parser
@@ -227,19 +242,27 @@ async def main():
             # Add repo validators to profile if not already present
             if "repo_availability" not in active_profile.validators:
                 from ..config.settings import ValidatorConfig
+
                 active_profile.validators["repo_availability"] = ValidatorConfig(
-                    enabled=True, required=True, timeout=30.0,
-                    parameters={"repo_url": args.repo_url, "clone_timeout": 30.0}
+                    enabled=True,
+                    required=True,
+                    timeout=30.0,
+                    parameters={"repo_url": args.repo_url, "clone_timeout": 30.0},
                 )
             else:
                 active_profile.validators["repo_availability"].enabled = True
-                active_profile.validators["repo_availability"].parameters["repo_url"] = args.repo_url
+                active_profile.validators["repo_availability"].parameters[
+                    "repo_url"
+                ] = args.repo_url
 
             if "license" not in active_profile.validators:
                 from ..config.settings import ValidatorConfig
+
                 active_profile.validators["license"] = ValidatorConfig(
-                    enabled=True, required=True, timeout=30.0,
-                    parameters={"repo_url": args.repo_url, "clone_timeout": 30.0}
+                    enabled=True,
+                    required=True,
+                    timeout=30.0,
+                    parameters={"repo_url": args.repo_url, "clone_timeout": 30.0},
                 )
             else:
                 active_profile.validators["license"].enabled = True
@@ -251,45 +274,63 @@ async def main():
             # Add runtime validators to profile if not already present
             if "runtime_exists" not in active_profile.validators:
                 from ..config.settings import ValidatorConfig
+
                 active_profile.validators["runtime_exists"] = ValidatorConfig(
-                    enabled=True, required=True, timeout=10.0,
-                    parameters={"runtime_command": runtime_command}
+                    enabled=True,
+                    required=True,
+                    timeout=10.0,
+                    parameters={"runtime_command": runtime_command},
                 )
             else:
                 active_profile.validators["runtime_exists"].enabled = True
-                active_profile.validators["runtime_exists"].parameters["runtime_command"] = runtime_command
+                active_profile.validators["runtime_exists"].parameters[
+                    "runtime_command"
+                ] = runtime_command
 
             if "runtime_executable" not in active_profile.validators:
                 from ..config.settings import ValidatorConfig
+
                 active_profile.validators["runtime_executable"] = ValidatorConfig(
-                    enabled=True, required=True, timeout=10.0,
-                    parameters={"runtime_command": runtime_command, "execution_timeout": 10.0}
+                    enabled=True,
+                    required=True,
+                    timeout=10.0,
+                    parameters={"runtime_command": runtime_command, "execution_timeout": 10.0},
                 )
             else:
                 active_profile.validators["runtime_executable"].enabled = True
-                active_profile.validators["runtime_executable"].parameters["runtime_command"] = runtime_command
+                active_profile.validators["runtime_executable"].parameters[
+                    "runtime_command"
+                ] = runtime_command
 
         # Enable container validators for container runtime commands
         if is_container_runtime_command(args.command):
             # Add container UBI validator
             if "container_ubi" not in active_profile.validators:
                 from ..config.settings import ValidatorConfig
+
                 active_profile.validators["container_ubi"] = ValidatorConfig(
-                    enabled=True, required=False, timeout=60.0,
-                    parameters={"warn_only_for_non_ubi": True}
+                    enabled=True,
+                    required=False,
+                    timeout=60.0,
+                    parameters={"warn_only_for_non_ubi": True},
                 )
             else:
                 active_profile.validators["container_ubi"].enabled = True
                 # Ensure warn_only is set to True by default
-                if "warn_only_for_non_ubi" not in active_profile.validators["container_ubi"].parameters:
-                    active_profile.validators["container_ubi"].parameters["warn_only_for_non_ubi"] = True
+                if (
+                    "warn_only_for_non_ubi"
+                    not in active_profile.validators["container_ubi"].parameters
+                ):
+                    active_profile.validators["container_ubi"].parameters[
+                        "warn_only_for_non_ubi"
+                    ] = True
 
-            # Add container version validator  
+            # Add container version validator
             if "container_version" not in active_profile.validators:
                 from ..config.settings import ValidatorConfig
+
                 active_profile.validators["container_version"] = ValidatorConfig(
-                    enabled=True, required=False, timeout=30.0,
-                    parameters={}
+                    enabled=True, required=False, timeout=30.0, parameters={}
                 )
             else:
                 active_profile.validators["container_version"].enabled = True
@@ -320,7 +361,10 @@ async def main():
 
         # Run validation
         session = await orchestrator.validate_server(
-            command_args=args.command, env_vars=env_vars, profile_name=args.profile, debug=args.debug
+            command_args=args.command,
+            env_vars=env_vars,
+            profile_name=args.profile,
+            debug=args.debug,
         )
 
         # Display results

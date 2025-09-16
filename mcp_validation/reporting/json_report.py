@@ -123,37 +123,89 @@ class JSONReporter:
                 "repo_availability": {
                     "executed": repo_availability is not None,
                     "repo_url": repo_availability.get("repo_url") if repo_availability else None,
-                    "is_git_repo": repo_availability.get("is_git_repo", False) if repo_availability else False,
-                    "clone_successful": repo_availability.get("clone_successful", False) if repo_availability else False,
-                    "has_readme": repo_availability.get("has_readme", False) if repo_availability else False,
-                    "has_license": repo_availability.get("has_license", False) if repo_availability else False,
-                    "readme_files": repo_availability.get("readme_files", []) if repo_availability else [],
-                    "license_files": repo_availability.get("license_files", []) if repo_availability else [],
+                    "is_git_repo": (
+                        repo_availability.get("is_git_repo", False) if repo_availability else False
+                    ),
+                    "clone_successful": (
+                        repo_availability.get("clone_successful", False)
+                        if repo_availability
+                        else False
+                    ),
+                    "has_readme": (
+                        repo_availability.get("has_readme", False) if repo_availability else False
+                    ),
+                    "has_license": (
+                        repo_availability.get("has_license", False) if repo_availability else False
+                    ),
+                    "readme_files": (
+                        repo_availability.get("readme_files", []) if repo_availability else []
+                    ),
+                    "license_files": (
+                        repo_availability.get("license_files", []) if repo_availability else []
+                    ),
                 },
                 "license_validation": {
                     "executed": license_validation is not None,
-                    "license_detected": license_validation.get("license_detected", False) if license_validation else False,
-                    "license_type": license_validation.get("license_type") if license_validation else None,
-                    "license_acceptable": license_validation.get("license_acceptable", False) if license_validation else False,
-                    "license_files_found": license_validation.get("license_files_found", []) if license_validation else [],
+                    "license_detected": (
+                        license_validation.get("license_detected", False)
+                        if license_validation
+                        else False
+                    ),
+                    "license_type": (
+                        license_validation.get("license_type") if license_validation else None
+                    ),
+                    "license_acceptable": (
+                        license_validation.get("license_acceptable", False)
+                        if license_validation
+                        else False
+                    ),
+                    "license_files_found": (
+                        license_validation.get("license_files_found", [])
+                        if license_validation
+                        else []
+                    ),
                 },
             },
             "runtime_validation": {
                 "runtime_exists": {
                     "executed": runtime_exists is not None,
-                    "runtime_command": runtime_exists.get("runtime_command") if runtime_exists else None,
-                    "runtime_found": runtime_exists.get("runtime_found", False) if runtime_exists else False,
+                    "runtime_command": (
+                        runtime_exists.get("runtime_command") if runtime_exists else None
+                    ),
+                    "runtime_found": (
+                        runtime_exists.get("runtime_found", False) if runtime_exists else False
+                    ),
                     "runtime_path": runtime_exists.get("runtime_path") if runtime_exists else None,
-                    "runtime_version": runtime_exists.get("runtime_version") if runtime_exists else None,
-                    "path_locations": runtime_exists.get("path_locations", []) if runtime_exists else [],
+                    "runtime_version": (
+                        runtime_exists.get("runtime_version") if runtime_exists else None
+                    ),
+                    "path_locations": (
+                        runtime_exists.get("path_locations", []) if runtime_exists else []
+                    ),
                 },
                 "runtime_executable": {
                     "executed": runtime_executable is not None,
-                    "executable_check_passed": runtime_executable.get("executable_check_passed", False) if runtime_executable else False,
-                    "test_execution_successful": runtime_executable.get("test_execution_successful", False) if runtime_executable else False,
-                    "test_command_used": runtime_executable.get("test_command_used") if runtime_executable else None,
-                    "test_execution_time": runtime_executable.get("test_execution_time", 0) if runtime_executable else 0,
-                    "test_exit_code": runtime_executable.get("test_exit_code") if runtime_executable else None,
+                    "executable_check_passed": (
+                        runtime_executable.get("executable_check_passed", False)
+                        if runtime_executable
+                        else False
+                    ),
+                    "test_execution_successful": (
+                        runtime_executable.get("test_execution_successful", False)
+                        if runtime_executable
+                        else False
+                    ),
+                    "test_command_used": (
+                        runtime_executable.get("test_command_used") if runtime_executable else None
+                    ),
+                    "test_execution_time": (
+                        runtime_executable.get("test_execution_time", 0)
+                        if runtime_executable
+                        else 0
+                    ),
+                    "test_exit_code": (
+                        runtime_executable.get("test_exit_code") if runtime_executable else None
+                    ),
                 },
             },
             "issues": {"errors": session.errors, "warnings": session.warnings},

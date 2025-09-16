@@ -62,11 +62,9 @@ class ConsoleReporter:
 
         # Show warnings for container validators always, others only in verbose mode
         show_warnings = (
-            self.verbose or 
-            result.validator_name.startswith("container_") or
-            not result.passed
+            self.verbose or result.validator_name.startswith("container_") or not result.passed
         )
-        
+
         if result.warnings and show_warnings:
             for warning in result.warnings:
                 print(f"    ⚠️  {warning}")
@@ -175,9 +173,9 @@ class ConsoleReporter:
         base_image = data.get("base_image", "Unknown")
         is_ubi_based = data.get("is_ubi_based", False)
         rhel_version = data.get("rhel_version")
-        
+
         print(f"    🐳 Container Image: {image_name}")
-        
+
         if is_ubi_based:
             if rhel_version:
                 print(f"    ✅ UBI Base: {base_image} (RHEL {rhel_version})")
@@ -191,9 +189,9 @@ class ConsoleReporter:
         image_name = data.get("image_name", "Unknown")
         image_tag = data.get("image_tag", "Unknown")
         using_latest = data.get("using_latest", False)
-        
+
         print(f"    🐳 Container Image: {image_name}")
-        
+
         if using_latest:
             print(f"    ✅ Version: {image_tag} (Latest)")
         else:

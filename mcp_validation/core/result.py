@@ -35,6 +35,7 @@ class ValidatorResult:
     data: Dict[str, Any]
     execution_time: float
 
+
 @dataclass
 class ValidationSession:
     """Complete validation session result."""
