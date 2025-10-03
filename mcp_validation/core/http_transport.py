@@ -61,15 +61,21 @@ class HTTPTransport(MCPTransport):
 
         response = await self._post_request("initialize", init_params)
 
+        # Check response status
+        if response.status != 200:
+            error_text = await response.text()
+            raise ValueError(f"HTTP {response.status}: {error_text}")
+
         # Extract session ID from headers if provided
-        if hasattr(response, 'headers') and "Mcp-Session-Id" in response.headers:
+        if "Mcp-Session-Id" in response.headers:
             self.session_id = response.headers["Mcp-Session-Id"]
 
         # Parse the response to get the initialization result
-        if hasattr(response, 'json'):
+        try:
             result = await response.json()
-        else:
-            result = response
+        except Exception as e:
+            content_type = response.headers.get('Content-Type', 'unknown')
+            raise ValueError(f"Failed to parse JSON response (Content-Type: {content_type}): {e}")
 
         # Send InitializedNotification
         await self._post_notification("notifications/initialized")
@@ -92,11 +98,14 @@ class HTTPTransport(MCPTransport):
             "params": params
         }
 
-        response = await self.session.post(
-            self.endpoint,
-            json=request_data,
-            headers=headers
-        )
+        try:
+            response = await self.session.post(
+                self.endpoint,
+                json=request_data,
+                headers=headers
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to connect to {self.endpoint}: {e}")
 
         # Handle session ID from response headers
         if "Mcp-Session-Id" in response.headers and not self.session_id:
@@ -122,15 +131,19 @@ class HTTPTransport(MCPTransport):
         if params:
             request_data["params"] = params
 
-        response = await self.session.post(
-            self.endpoint,
-            json=request_data,
-            headers=headers
-        )
+        try:
+            response = await self.session.post(
+                self.endpoint,
+                json=request_data,
+                headers=headers
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to send notification to {self.endpoint}: {e}")
 
         # Expect 202 Accepted for notifications
         if response.status != 202:
-            raise ValueError(f"Unexpected response status for notification: {response.status}")
+            error_text = await response.text()
+            raise ValueError(f"Unexpected response status for notification: {response.status} - {error_text}")
 
     async def _handle_response(self, response: aiohttp.ClientResponse) -> Dict[str, Any]:
         """Handle HTTP response, supporting both JSON and SSE."""
@@ -221,7 +234,7 @@ class HTTPTransport(MCPTransport):
 
     async def close(self) -> None:
         """Close the transport connection."""
-        if self.session:
+        if self.session and not self.session.closed:
             # Optionally send session termination
             if self.session_id:
                 try:
@@ -231,7 +244,12 @@ class HTTPTransport(MCPTransport):
                     # Ignore errors during cleanup
                     pass
 
-            await self.session.close()
-            self.session = None
-            self.session_id = None
-            self._initialized = False
+            try:
+                await self.session.close()
+            except Exception:
+                # Ignore errors during session close
+                pass
+
+        self.session = None
+        self.session_id = None
+        self._initialized = False

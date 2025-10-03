@@ -262,6 +262,14 @@ class MCPValidationOrchestrator:
             error_msg = f"Validation setup failed: {str(e)}"
             errors.append(error_msg)
             log_execution_result(False, error_msg)
+        finally:
+            # Ensure transport is always cleaned up
+            if transport:
+                try:
+                    await transport.close()
+                except Exception:
+                    # Ignore cleanup errors
+                    pass
 
         # Determine overall success
         overall_success = self._determine_overall_success(validator_results, profile)

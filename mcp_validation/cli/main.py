@@ -96,14 +96,20 @@ Configuration Examples:
   # Use HTTP transport
   mcp-validate --transport http --endpoint http://localhost:3000/mcp
 
+  # Use specific profile with stdio transport
+  mcp-validate --profile security_focused -- python server.py
+
   # Use specific profile with HTTP transport
   mcp-validate --profile security_focused --transport http --endpoint http://localhost:3000/mcp
 
-  # Use custom config file
+  # Use custom config file with stdio transport
   mcp-validate --config ./my-config.json -- node server.js
 
-  # Override specific validators
+  # Override specific validators with stdio transport
   mcp-validate --enable ping --disable security -- ./server
+
+  # JSON report with stdio transport
+  mcp-validate --json-report validation-report.json -- python server.py
 
   # List available profiles and validators
   mcp-validate --list-profiles
@@ -115,8 +121,8 @@ Environment Variables:
         """,
     )
 
-    # Command arguments
-    parser.add_argument("command", nargs="*", help="Command and arguments to run the MCP server")
+    # Command arguments (everything after -- for stdio transport)
+    parser.add_argument("command", nargs=argparse.REMAINDER, help="Command and arguments to run the MCP server (use -- to separate tool options from server command)")
 
     # Configuration options
     parser.add_argument("--config", metavar="FILE", help="Configuration file path")
@@ -228,10 +234,15 @@ async def main():
             print_validator_info(orchestrator)
             return 0
 
+        # Process command arguments (remove -- separator if present)
+        command_args = args.command
+        if command_args and command_args[0] == "--":
+            command_args = command_args[1:]
+
         # Validate transport-specific arguments
         if args.transport == "stdio":
-            if not args.command:
-                parser.error("Command arguments required for stdio transport")
+            if not command_args:
+                parser.error("Command arguments required for stdio transport (use -- to separate options from command)")
             if args.endpoint:
                 parser.error("--endpoint is not valid for stdio transport")
         elif args.transport == "http":
@@ -296,7 +307,7 @@ async def main():
                 active_profile.validators["license"].parameters["repo_url"] = args.repo_url
 
         # Enable runtime validators based on command or --runtime-command
-        runtime_command = args.runtime_command or detect_runtime_command(args.command)
+        runtime_command = args.runtime_command or detect_runtime_command(command_args)
         if runtime_command:
             # Add runtime validators to profile if not already present
             if "runtime_exists" not in active_profile.validators:
@@ -330,7 +341,7 @@ async def main():
                 ] = runtime_command
 
         # Enable container validators for container runtime commands
-        if is_container_runtime_command(args.command):
+        if is_container_runtime_command(command_args):
             # Add container UBI validator
             if "container_ubi" not in active_profile.validators:
                 from ..config.settings import ValidatorConfig
@@ -371,8 +382,8 @@ async def main():
 
         # Display what we're testing
         print(f"Transport: {args.transport}")
-        if args.transport == "stdio" and args.command:
-            print(f"Testing MCP server: {' '.join(args.command)}")
+        if args.transport == "stdio" and command_args:
+            print(f"Testing MCP server: {' '.join(command_args)}")
         elif args.transport == "http":
             print(f"Testing MCP endpoint: {args.endpoint}")
         print(f"Using profile: {active_profile.name}")
@@ -380,7 +391,7 @@ async def main():
             print(f"Repository URL: {args.repo_url}")
         if runtime_command:
             print(f"Runtime command: {runtime_command}")
-        if args.command and is_container_runtime_command(args.command):
+        if command_args and is_container_runtime_command(command_args):
             print("Container runtime detected: Container image validation enabled")
         if env_vars:
             print("Environment variables:")
@@ -392,7 +403,7 @@ async def main():
 
         # Run validation
         session = await orchestrator.validate_server(
-            command_args=args.command,
+            command_args=command_args,
             env_vars=env_vars,
             profile_name=args.profile,
             debug=args.debug,
@@ -408,7 +419,7 @@ async def main():
         if args.json_report:
             json_reporter = JSONReporter()
             # Use the final command args from the session (includes injected -e options for containers)
-            final_command_args = session.command_args if session.command_args else args.command
+            final_command_args = session.command_args if session.command_args else command_args
             json_reporter.save_report(session, args.json_report, final_command_args, env_vars)
 
         # Exit with appropriate code
