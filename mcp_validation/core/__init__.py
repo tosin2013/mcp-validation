@@ -2,6 +2,8 @@
 
 from .result import MCPValidationResult, ValidationSession
 from .transport import MCPTransport, StdioTransport, JSONRPCTransport
+from .http_transport import HTTPTransport
+from .transport_factory import TransportFactory
 from .validator import MCPValidationOrchestrator, ValidatorRegistry
 
 __all__ = [
@@ -11,5 +13,7 @@ __all__ = [
     "ValidatorRegistry",
     "MCPTransport",
     "StdioTransport",
+    "HTTPTransport",
+    "TransportFactory",
     "JSONRPCTransport",
 ]

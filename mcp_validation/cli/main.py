@@ -90,11 +90,14 @@ def create_argument_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Configuration Examples:
-  # Use default comprehensive profile
+  # Use default comprehensive profile (stdio transport)
   mcp-validate -- npx @dynatrace-oss/dynatrace-mcp-server
 
-  # Use specific profile
-  mcp-validate --profile security_focused -- python server.py
+  # Use HTTP transport
+  mcp-validate --transport http --endpoint http://localhost:3000/mcp
+
+  # Use specific profile with HTTP transport
+  mcp-validate --profile security_focused --transport http --endpoint http://localhost:3000/mcp
 
   # Use custom config file
   mcp-validate --config ./my-config.json -- node server.js
@@ -185,6 +188,20 @@ Environment Variables:
         help="Runtime command to validate (e.g., uv, docker, npx). If not specified, will be auto-detected from the MCP server command.",
     )
 
+    # Transport options
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default="stdio",
+        help="Transport type to use for MCP communication (default: stdio)",
+    )
+
+    parser.add_argument(
+        "--endpoint",
+        metavar="URL",
+        help="HTTP endpoint URL for http transport (e.g., http://localhost:3000/mcp)",
+    )
+
     return parser
 
 
@@ -211,9 +228,19 @@ async def main():
             print_validator_info(orchestrator)
             return 0
 
-        # Validate command arguments
-        if not args.command:
-            parser.error("Command arguments required for validation")
+        # Validate transport-specific arguments
+        if args.transport == "stdio":
+            if not args.command:
+                parser.error("Command arguments required for stdio transport")
+            if args.endpoint:
+                parser.error("--endpoint is not valid for stdio transport")
+        elif args.transport == "http":
+            if not args.endpoint:
+                parser.error("--endpoint is required for http transport")
+            if not args.endpoint.startswith(("http://", "https://")):
+                parser.error("--endpoint must be a valid HTTP URL (http:// or https://)")
+        else:
+            parser.error(f"Unsupported transport: {args.transport}")
 
         # Apply command-line overrides
         if args.profile:
@@ -343,13 +370,17 @@ async def main():
         env_vars = parse_env_args(args.env) if args.env else None
 
         # Display what we're testing
-        print(f"Testing MCP server: {' '.join(args.command)}")
+        print(f"Transport: {args.transport}")
+        if args.transport == "stdio" and args.command:
+            print(f"Testing MCP server: {' '.join(args.command)}")
+        elif args.transport == "http":
+            print(f"Testing MCP endpoint: {args.endpoint}")
         print(f"Using profile: {active_profile.name}")
         if args.repo_url:
             print(f"Repository URL: {args.repo_url}")
         if runtime_command:
             print(f"Runtime command: {runtime_command}")
-        if is_container_runtime_command(args.command):
+        if args.command and is_container_runtime_command(args.command):
             print("Container runtime detected: Container image validation enabled")
         if env_vars:
             print("Environment variables:")
@@ -365,6 +396,8 @@ async def main():
             env_vars=env_vars,
             profile_name=args.profile,
             debug=args.debug,
+            transport_type=args.transport,
+            endpoint=args.endpoint,
         )
 
         # Display results

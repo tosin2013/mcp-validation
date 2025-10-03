@@ -167,10 +167,12 @@ class MCPValidationOrchestrator:
 
     async def validate_server(
         self,
-        command_args: List[str],
+        command_args: Optional[List[str]] = None,
         env_vars: Dict[str, str] = None,
         profile_name: Optional[str] = None,
         debug: bool = False,
+        transport_type: str = "stdio",
+        endpoint: Optional[str] = None,
     ) -> ValidationSession:
         """Execute complete validation session against MCP server."""
 
@@ -182,6 +184,8 @@ class MCPValidationOrchestrator:
         warnings = []
         validator_results = []
         final_command_args = command_args  # Initialize with original command args
+        transport = None
+        process = None
 
         # Use specified profile or active profile
         if profile_name:
@@ -195,44 +199,27 @@ class MCPValidationOrchestrator:
             # Log execution start with full context
             log_execution_start(command_args, env_vars)
 
-            # Start MCP server process
-            log_execution_step("Preparing environment")
-            env = os.environ.copy()
+            # Create transport using factory
+            log_execution_step("Creating transport", f"Type: {transport_type}")
+            from .transport_factory import TransportFactory
 
-            # For container commands, inject environment variables as -e options
-            final_command_args = command_args
-            if (
-                env_vars
-                and len(command_args) >= 2
-                and command_args[0] in ["docker", "podman"]
-                and command_args[1] == "run"
-            ):
-                final_command_args = _inject_container_env_vars(command_args, env_vars)
-                log_execution_step(
-                    f"Injected {len(env_vars)} environment variables as -e options for container"
-                )
-                log_execution_step("Modified command", f"Command: {' '.join(final_command_args)}")
-            elif env_vars:
-                # For non-container commands, use environment variables in subprocess environment
-                env.update(env_vars)
-                log_execution_step(
-                    f"Added {len(env_vars)} environment variables to subprocess environment"
-                )
-
-            log_execution_step("Creating subprocess", f"Command: {' '.join(final_command_args)}")
-            process = await asyncio.create_subprocess_exec(
-                *final_command_args,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env,
+            transport = await TransportFactory.create_transport(
+                transport_type=transport_type,
+                command_args=command_args,
+                endpoint=endpoint,
+                env_vars=env_vars
             )
 
-            log_execution_step("Process started", f"PID: {process.pid}")
+            # For stdio transport, we need to get the process for compatibility
+            if transport_type == "stdio" and hasattr(transport, 'process'):
+                process = transport.process
+                final_command_args = command_args
+                log_execution_step("Process started", f"PID: {process.pid}")
+            elif transport_type == "http":
+                log_execution_step("HTTP transport initialized", f"Endpoint: {endpoint}")
 
-            # Create transport and validation context
+            # Create validation context
             log_execution_step("Setting up validation context")
-            transport = StdioTransport(process)
             context = ValidationContext(
                 server_info={},
                 capabilities={},
@@ -240,7 +227,8 @@ class MCPValidationOrchestrator:
                 command_args=final_command_args,
                 transport=transport,
                 process=process,
-                transport_type="stdio",
+                endpoint=endpoint,
+                transport_type=transport_type,
             )
 
             # Create and configure validators
@@ -264,10 +252,11 @@ class MCPValidationOrchestrator:
                     validators, context, profile
                 )
 
-            # Clean up process
-            log_execution_step("Cleaning up process")
-            await self._cleanup_process(process)
-            log_execution_result(True, "Process execution completed")
+            # Clean up transport
+            log_execution_step("Cleaning up transport")
+            if transport:
+                await transport.close()
+            log_execution_result(True, "Transport cleanup completed")
 
         except Exception as e:
             error_msg = f"Validation setup failed: {str(e)}"
