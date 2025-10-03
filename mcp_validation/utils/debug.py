@@ -5,14 +5,21 @@ import shlex
 import sys
 from typing import Any, Dict, List, Optional
 
-# Global debug state - set by CLI argument
+# Global debug and verbose state - set by CLI arguments
 _debug_enabled = False
+_verbose_enabled = False
 
 
 def set_debug_enabled(enabled: bool) -> None:
     """Set the global debug state."""
     global _debug_enabled
     _debug_enabled = enabled
+
+
+def set_verbose_enabled(enabled: bool) -> None:
+    """Set the global verbose state."""
+    global _verbose_enabled
+    _verbose_enabled = enabled
 
 
 def debug_log(message: str, level: str = "INFO", category: str = "GENERAL") -> None:
@@ -27,6 +34,18 @@ def is_debug_enabled() -> bool:
     """Check if debug mode is enabled via CLI --debug flag."""
     global _debug_enabled
     return _debug_enabled
+
+
+def is_verbose_enabled() -> bool:
+    """Check if verbose mode is enabled via CLI --verbose flag."""
+    global _verbose_enabled
+    return _verbose_enabled
+
+
+def verbose_log(message: str) -> None:
+    """Log verbose messages if verbose mode is enabled."""
+    if is_verbose_enabled():
+        print(f"🔍 {message}", file=sys.stdout, flush=True)
 
 
 def get_timestamp() -> str:

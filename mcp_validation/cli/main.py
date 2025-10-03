@@ -407,6 +407,7 @@ async def main():
             env_vars=env_vars,
             profile_name=args.profile,
             debug=args.debug,
+            verbose=args.verbose,
             transport_type=args.transport,
             endpoint=args.endpoint,
         )

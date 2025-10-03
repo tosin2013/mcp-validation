@@ -13,6 +13,8 @@ from ..utils.debug import (
     log_validation_summary,
     log_validator_progress,
     set_debug_enabled,
+    set_verbose_enabled,
+    verbose_log,
 )
 from ..validators.base import BaseValidator, ValidationContext, ValidatorResult
 from .result import ValidationSession
@@ -171,13 +173,15 @@ class MCPValidationOrchestrator:
         env_vars: Dict[str, str] = None,
         profile_name: Optional[str] = None,
         debug: bool = False,
+        verbose: bool = False,
         transport_type: str = "stdio",
         endpoint: Optional[str] = None,
     ) -> ValidationSession:
         """Execute complete validation session against MCP server."""
 
-        # Set debug state based on CLI flag
+        # Set debug and verbose state based on CLI flags
         set_debug_enabled(debug)
+        set_verbose_enabled(verbose)
 
         start_time = time.time()
         errors = []
@@ -200,6 +204,7 @@ class MCPValidationOrchestrator:
             log_execution_start(command_args, env_vars)
 
             # Create transport using factory
+            verbose_log(f"Setting up {transport_type} transport...")
             log_execution_step("Creating transport", f"Type: {transport_type}")
             from .transport_factory import TransportFactory
 
@@ -209,6 +214,7 @@ class MCPValidationOrchestrator:
                 endpoint=endpoint,
                 env_vars=env_vars
             )
+            verbose_log(f"✅ Transport initialized successfully")
 
             # For stdio transport, we need to get the process for compatibility
             if transport_type == "stdio" and hasattr(transport, 'process'):
@@ -232,13 +238,16 @@ class MCPValidationOrchestrator:
             )
 
             # Create and configure validators
+            verbose_log(f"Loading validation profile: {profile.name}")
             log_execution_step("Creating validators", f"Profile: {profile.name}")
             validators = self._create_validators(profile)
+            verbose_log(f"📋 Configured {len(validators)} validators: {', '.join([v.name for v in validators])}")
             log_execution_step(
                 f"Configured {len(validators)} validators", f"Names: {[v.name for v in validators]}"
             )
 
             # Execute validators
+            verbose_log(f"🚀 Starting validation ({len(validators)} validators)")
             log_execution_step(
                 "Starting validation",
                 f"Mode: {'parallel' if profile.parallel_execution else 'sequential'}",
@@ -251,6 +260,7 @@ class MCPValidationOrchestrator:
                 validator_results = await self._execute_validators_sequential(
                     validators, context, profile
                 )
+            verbose_log(f"🏁 Validation completed")
 
             # Clean up transport
             log_execution_step("Cleaning up transport")
@@ -378,11 +388,13 @@ class MCPValidationOrchestrator:
 
         for i, validator in enumerate(validators, 1):
             if not validator.is_applicable(context):
+                verbose_log(f"⏭️  Skipping {validator.name} (not applicable)")
                 log_validator_progress(
                     validator.name, "SKIPPED", "Not applicable for current context"
                 )
                 continue
 
+            verbose_log(f"🔄 Running {validator.name} ({i}/{total_validators})")
             log_validator_progress(validator.name, "STARTING", f"({i}/{total_validators})")
             validator_start_time = time.time()
 
@@ -392,12 +404,14 @@ class MCPValidationOrchestrator:
 
                 validator_execution_time = time.time() - validator_start_time
                 status = "PASSED" if result.passed else "FAILED"
+                status_icon = "✅" if result.passed else "❌"
                 details = f"Time: {validator_execution_time:.2f}s"
                 if result.errors:
                     details += f", Errors: {len(result.errors)}"
                 if result.warnings:
                     details += f", Warnings: {len(result.warnings)}"
 
+                verbose_log(f"{status_icon} {validator.name}: {status} ({validator_execution_time:.2f}s)")
                 log_validator_progress(validator.name, status, details)
 
                 # Update context with results (for dependent validators)
