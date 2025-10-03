@@ -2,7 +2,7 @@
 
 import asyncio
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from ..core.transport import MCPTransport
@@ -22,6 +22,10 @@ class ValidationContext:
     # New fields for HTTP transport
     endpoint: str | None = None
     transport_type: str = "stdio"
+    # Discovered items from capabilities validator
+    discovered_tools: list[str] = field(default_factory=list)
+    discovered_resources: list[str] = field(default_factory=list)
+    discovered_prompts: list[str] = field(default_factory=list)
 
 
 @dataclass

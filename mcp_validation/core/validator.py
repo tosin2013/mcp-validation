@@ -427,6 +427,16 @@ class MCPValidationOrchestrator:
                         "CONTEXT_UPDATED",
                         "Server info and capabilities stored for dependent validators",
                     )
+                elif validator.name == "capabilities":
+                    # Store discovered items for dependent validators (like security)
+                    context.discovered_tools = result.data.get("tools", [])
+                    context.discovered_resources = result.data.get("resources", [])
+                    context.discovered_prompts = result.data.get("prompts", [])
+                    log_validator_progress(
+                        validator.name,
+                        "CONTEXT_UPDATED",
+                        f"Discovered items stored: {len(context.discovered_tools)} tools, {len(context.discovered_resources)} resources, {len(context.discovered_prompts)} prompts",
+                    )
 
                 # Stop on required validator failure if configured
                 if (

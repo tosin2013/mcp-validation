@@ -413,7 +413,9 @@ async def main():
             if getattr(args, 'auth_token', None):
                 print("Authentication: OAuth Bearer token provided")
             elif getattr(args, 'client_id', None):
-                print(f"Authentication: OAuth Dynamic Client Registration (Client ID: {args.client_id})")
+                print(f"Authentication: OAuth Pre-registered Client (Client ID: {args.client_id})")
+            else:
+                print("Authentication: OAuth Dynamic Client Registration")
         print(f"Using profile: {active_profile.name}")
         if args.repo_url:
             print(f"Repository URL: {args.repo_url}")

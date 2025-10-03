@@ -45,10 +45,13 @@ class SecurityValidator(BaseValidator):
         start_time = time.time()
         errors = []
         warnings = []
+        # Get tools count from context (discovered by capabilities validator)
+        tools_count = len(context.discovered_tools) if context.discovered_tools else 0
+
         data = {
             "scan_results": None,
             "scan_file": None,
-            "tools_scanned": 0,
+            "tools_scanned": tools_count,  # Use discovered tools count as baseline
             "vulnerabilities_found": 0,
             "vulnerability_types": [],
             "risk_levels": [],
