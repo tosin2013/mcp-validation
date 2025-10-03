@@ -3,7 +3,7 @@
 import asyncio
 import json
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from .base import BaseValidator, ValidationContext, ValidatorResult
 
@@ -20,7 +20,7 @@ class ErrorComplianceValidator(BaseValidator):
         return "Test MCP error response compliance with JSON-RPC 2.0"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["protocol"]  # Needs basic protocol established
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -59,11 +59,11 @@ class ErrorComplianceValidator(BaseValidator):
         )
 
     async def _test_invalid_method_error(
-        self, context: ValidationContext, warnings: List[str], data: Dict[str, Any]
+        self, context: ValidationContext, warnings: list[str], data: dict[str, Any]
     ) -> None:
         """Test error response for invalid method calls."""
         try:
-            response: Dict[str, Any] = await context.transport.send_and_receive(
+            response: dict[str, Any] = await context.transport.send_and_receive(
                 "invalid_method_that_does_not_exist",
                 params={},
                 timeout=self.config.get("timeout", 5.0),
@@ -127,7 +127,7 @@ class ErrorComplianceValidator(BaseValidator):
             warnings.append(f"Invalid method error test failed: {str(e)}")
 
     async def _test_malformed_request_error(
-        self, context: ValidationContext, warnings: List[str], data: Dict[str, Any]
+        self, context: ValidationContext, warnings: list[str], data: dict[str, Any]
     ) -> None:
         """Test error response for malformed JSON-RPC requests."""
         try:

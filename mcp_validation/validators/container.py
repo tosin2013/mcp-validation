@@ -4,7 +4,7 @@ import asyncio
 import json
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..utils.debug import debug_log as _debug_log
 from .base import BaseValidator, ValidationContext, ValidatorResult
@@ -27,14 +27,14 @@ class ContainerUBIValidator(BaseValidator):
         return "Validates that container images use UBI base images with RHEL 9 or 10 (configurable: warns by default, can fail in strict mode)"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["runtime_exists"]  # Depends on docker/podman existing
 
     def is_applicable(self, context: ValidationContext) -> bool:
         """Only applicable for container runtime commands."""
         return self.enabled and self._is_container_command(context.command_args)
 
-    def _is_container_command(self, command_args: List[str]) -> bool:
+    def _is_container_command(self, command_args: list[str]) -> bool:
         """Check if command is a container runtime command."""
         if not command_args:
             return False
@@ -47,7 +47,7 @@ class ContainerUBIValidator(BaseValidator):
 
         return False
 
-    def _extract_image_name(self, command_args: List[str]) -> Optional[str]:
+    def _extract_image_name(self, command_args: list[str]) -> str | None:
         """Extract container image name from command arguments."""
         if not self._is_container_command(command_args):
             return None
@@ -213,7 +213,7 @@ class ContainerUBIValidator(BaseValidator):
             execution_time=execution_time,
         )
 
-    async def _inspect_image(self, runtime: str, image_name: str) -> Dict[str, Any]:
+    async def _inspect_image(self, runtime: str, image_name: str) -> dict[str, Any]:
         """Inspect container image to get metadata."""
         result = {
             "image_inspected": False,
@@ -285,7 +285,7 @@ class ContainerUBIValidator(BaseValidator):
 
         return result
 
-    def _check_ubi_compliance(self, inspection_result: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_ubi_compliance(self, inspection_result: dict[str, Any]) -> dict[str, Any]:
         """Check if the image is UBI-compliant based on inspection data."""
         result = {
             "is_ubi_based": False,
@@ -381,14 +381,14 @@ class ContainerVersionValidator(BaseValidator):
         return "Validates that container images use the latest available version"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["runtime_exists"]  # Depends on docker/podman existing
 
     def is_applicable(self, context: ValidationContext) -> bool:
         """Only applicable for container runtime commands."""
         return self.enabled and self._is_container_command(context.command_args)
 
-    def _is_container_command(self, command_args: List[str]) -> bool:
+    def _is_container_command(self, command_args: list[str]) -> bool:
         """Check if command is a container runtime command."""
         if not command_args:
             return False
@@ -401,7 +401,7 @@ class ContainerVersionValidator(BaseValidator):
 
         return False
 
-    def _extract_image_name(self, command_args: List[str]) -> Optional[str]:
+    def _extract_image_name(self, command_args: list[str]) -> str | None:
         """Extract container image name from command arguments."""
         if not self._is_container_command(command_args):
             return None
@@ -545,7 +545,7 @@ class ContainerVersionValidator(BaseValidator):
             execution_time=execution_time,
         )
 
-    def _parse_image_name(self, image_name: str) -> Dict[str, Any]:
+    def _parse_image_name(self, image_name: str) -> dict[str, Any]:
         """Parse container image name to extract registry, repository, and tag."""
         result = {
             "image_registry": None,
@@ -580,7 +580,7 @@ class ContainerVersionValidator(BaseValidator):
 
     async def _check_available_tags(
         self, runtime: str, image_name: str, current_tag: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check available tags for the image (best effort)."""
         result = {
             "tag_check_performed": False,

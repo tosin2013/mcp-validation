@@ -2,7 +2,7 @@
 
 import datetime
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..core.result import ValidationSession, ValidatorResult
 
@@ -13,9 +13,9 @@ class JSONReporter:
     def generate_report(
         self,
         session: ValidationSession,
-        command_args: List[str],
-        env_vars: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+        command_args: list[str],
+        env_vars: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """Generate a comprehensive JSON report."""
 
         # Extract aggregated data
@@ -213,7 +213,7 @@ class JSONReporter:
 
         return report
 
-    def _format_validator_result(self, result: ValidatorResult) -> Dict[str, Any]:
+    def _format_validator_result(self, result: ValidatorResult) -> dict[str, Any]:
         """Format a single validator result for JSON output."""
         return {
             "validator_name": result.validator_name,
@@ -230,8 +230,8 @@ class JSONReporter:
         self,
         session: ValidationSession,
         filename: str,
-        command_args: List[str],
-        env_vars: Optional[Dict[str, str]] = None,
+        command_args: list[str],
+        env_vars: dict[str, str] | None = None,
     ) -> None:
         """Generate and save JSON report to file."""
         report = self.generate_report(session, command_args, env_vars)

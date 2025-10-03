@@ -6,7 +6,7 @@ import os
 import shutil
 import tempfile
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from .base import BaseValidator, ValidationContext, ValidatorResult
 
@@ -23,7 +23,7 @@ class SecurityValidator(BaseValidator):
         return "Security analysis using mcp-scan tool"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["protocol"]  # Needs basic protocol established
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -134,8 +134,8 @@ class SecurityValidator(BaseValidator):
         )
 
     async def _run_mcp_scan(
-        self, context: ValidationContext, warnings: List[str]
-    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        self, context: ValidationContext, warnings: list[str]
+    ) -> tuple[dict[str, Any] | None, str | None]:
         """Run mcp-scan security analysis on the server."""
 
         # Create temporary MCP configuration file for mcp-scan
@@ -212,8 +212,8 @@ class SecurityValidator(BaseValidator):
                 pass
 
     def _parse_scan_results(
-        self, scan_results: Dict[str, Any]
-    ) -> Tuple[int, List[Dict[str, Any]], List[Dict[str, Any]]]:
+        self, scan_results: dict[str, Any]
+    ) -> tuple[int, list[dict[str, Any]], list[dict[str, Any]]]:
         """Parse mcp-scan results to extract metrics."""
         tools_scanned = 0
         vulnerabilities = []
@@ -237,7 +237,7 @@ class SecurityValidator(BaseValidator):
         return tools_scanned, vulnerabilities, issues
 
     def _check_vulnerability_threshold(
-        self, vulnerabilities: List[Dict[str, Any]], threshold: str
+        self, vulnerabilities: list[dict[str, Any]], threshold: str
     ) -> bool:
         """Check if vulnerabilities exceed the specified threshold."""
         if not vulnerabilities:

@@ -1,9 +1,8 @@
 """Core validation orchestrator for MCP servers."""
 
 import asyncio
-import os
 import time
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from ..config.settings import ConfigurationManager, ValidationProfile
 from ..utils.debug import (
@@ -18,10 +17,9 @@ from ..utils.debug import (
 )
 from ..validators.base import BaseValidator, ValidationContext, ValidatorResult
 from .result import ValidationSession
-from .transport import StdioTransport
 
 
-def _inject_container_env_vars(command_args: List[str], env_vars: Dict[str, str]) -> List[str]:
+def _inject_container_env_vars(command_args: list[str], env_vars: dict[str, str]) -> list[str]:
     """Inject environment variables as -e options for container commands."""
     if not env_vars or len(command_args) < 2:
         return command_args
@@ -94,23 +92,23 @@ class ValidatorRegistry:
     """Registry for available validators."""
 
     def __init__(self):
-        self._validators: Dict[str, Type[BaseValidator]] = {}
+        self._validators: dict[str, type[BaseValidator]] = {}
 
-    def register(self, validator_class: Type[BaseValidator]) -> None:
+    def register(self, validator_class: type[BaseValidator]) -> None:
         """Register a validator class."""
         # Create temporary instance to get name
         temp_instance = validator_class()
         self._validators[temp_instance.name] = validator_class
 
-    def get_validator(self, name: str) -> Optional[Type[BaseValidator]]:
+    def get_validator(self, name: str) -> type[BaseValidator] | None:
         """Get validator class by name."""
         return self._validators.get(name)
 
-    def list_validators(self) -> List[str]:
+    def list_validators(self) -> list[str]:
         """List all registered validator names."""
         return list(self._validators.keys())
 
-    def create_validator(self, name: str, config: Dict[str, Any] = None) -> Optional[BaseValidator]:
+    def create_validator(self, name: str, config: dict[str, Any] = None) -> BaseValidator | None:
         """Create validator instance with configuration."""
         validator_class = self.get_validator(name)
         if validator_class:
@@ -163,19 +161,22 @@ class MCPValidationOrchestrator:
             # Handle missing validators gracefully
             print(f"Warning: Some validators not available: {e}")
 
-    def register_validator(self, validator_class: Type[BaseValidator]) -> None:
+    def register_validator(self, validator_class: type[BaseValidator]) -> None:
         """Register a custom validator."""
         self.registry.register(validator_class)
 
     async def validate_server(
         self,
-        command_args: Optional[List[str]] = None,
-        env_vars: Dict[str, str] = None,
-        profile_name: Optional[str] = None,
+        command_args: list[str] | None = None,
+        env_vars: dict[str, str] = None,
+        profile_name: str | None = None,
         debug: bool = False,
         verbose: bool = False,
         transport_type: str = "stdio",
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
+        auth_token: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
     ) -> ValidationSession:
         """Execute complete validation session against MCP server."""
 
@@ -212,9 +213,12 @@ class MCPValidationOrchestrator:
                 transport_type=transport_type,
                 command_args=command_args,
                 endpoint=endpoint,
-                env_vars=env_vars
+                env_vars=env_vars,
+                auth_token=auth_token,
+                client_id=client_id,
+                client_secret=client_secret
             )
-            verbose_log(f"✅ Transport initialized successfully")
+            verbose_log("✅ Transport initialized successfully")
 
             # For stdio transport, we need to get the process for compatibility
             if transport_type == "stdio" and hasattr(transport, 'process'):
@@ -260,7 +264,7 @@ class MCPValidationOrchestrator:
                 validator_results = await self._execute_validators_sequential(
                     validators, context, profile
                 )
-            verbose_log(f"🏁 Validation completed")
+            verbose_log("🏁 Validation completed")
 
             # Clean up transport
             log_execution_step("Cleaning up transport")
@@ -306,7 +310,7 @@ class MCPValidationOrchestrator:
             command_args=final_command_args,
         )
 
-    def _create_validators(self, profile: ValidationProfile) -> List[BaseValidator]:
+    def _create_validators(self, profile: ValidationProfile) -> list[BaseValidator]:
         """Create configured validator instances."""
         validators = []
 
@@ -333,8 +337,8 @@ class MCPValidationOrchestrator:
         return self._sort_validators_by_dependencies(validators)
 
     def _sort_validators_by_dependencies(
-        self, validators: List[BaseValidator]
-    ) -> List[BaseValidator]:
+        self, validators: list[BaseValidator]
+    ) -> list[BaseValidator]:
         """Sort validators by their dependencies with repository validators first."""
         validator_map = {v.name: v for v in validators}
         sorted_validators = []
@@ -378,10 +382,10 @@ class MCPValidationOrchestrator:
 
     async def _execute_validators_sequential(
         self,
-        validators: List[BaseValidator],
+        validators: list[BaseValidator],
         context: ValidationContext,
         profile: ValidationProfile,
-    ) -> List[ValidatorResult]:
+    ) -> list[ValidatorResult]:
         """Execute validators sequentially."""
         results = []
         total_validators = len(validators)
@@ -468,17 +472,17 @@ class MCPValidationOrchestrator:
 
     async def _execute_validators_parallel(
         self,
-        validators: List[BaseValidator],
+        validators: list[BaseValidator],
         context: ValidationContext,
         profile: ValidationProfile,
-    ) -> List[ValidatorResult]:
+    ) -> list[ValidatorResult]:
         """Execute validators in parallel (where possible)."""
         # For now, implement sequential execution
         # Parallel execution would need more sophisticated dependency handling
         return await self._execute_validators_sequential(validators, context, profile)
 
     def _determine_overall_success(
-        self, validator_results: List[ValidatorResult], profile: ValidationProfile
+        self, validator_results: list[ValidatorResult], profile: ValidationProfile
     ) -> bool:
         """Determine if overall validation was successful."""
         for result in validator_results:

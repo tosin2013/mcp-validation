@@ -2,11 +2,9 @@
 
 import asyncio
 import os
-from typing import List, Optional, Dict, Any
 
-from .transport import MCPTransport
-from .transport import StdioTransport
 from .http_transport import HTTPTransport
+from .transport import MCPTransport, StdioTransport
 
 
 class TransportFactory:
@@ -15,9 +13,12 @@ class TransportFactory:
     @staticmethod
     async def create_transport(
         transport_type: str,
-        command_args: Optional[List[str]] = None,
-        endpoint: Optional[str] = None,
-        env_vars: Optional[Dict[str, str]] = None
+        command_args: list[str] | None = None,
+        endpoint: str | None = None,
+        env_vars: dict[str, str] | None = None,
+        auth_token: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None
     ) -> MCPTransport:
         """Create and initialize transport based on type."""
 
@@ -29,15 +30,15 @@ class TransportFactory:
         elif transport_type == "http":
             if not endpoint:
                 raise ValueError("Endpoint URL required for http transport")
-            return await TransportFactory._create_http_transport(endpoint)
+            return await TransportFactory._create_http_transport(endpoint, auth_token, client_id, client_secret)
 
         else:
             raise ValueError(f"Unsupported transport type: {transport_type}")
 
     @staticmethod
     async def _create_stdio_transport(
-        command_args: List[str],
-        env_vars: Optional[Dict[str, str]] = None
+        command_args: list[str],
+        env_vars: dict[str, str] | None = None
     ) -> StdioTransport:
         """Create stdio transport by launching subprocess."""
         from ..core.validator import _inject_container_env_vars
@@ -70,22 +71,27 @@ class TransportFactory:
         return StdioTransport(process)
 
     @staticmethod
-    async def _create_http_transport(endpoint: str) -> HTTPTransport:
+    async def _create_http_transport(
+        endpoint: str,
+        auth_token: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None
+    ) -> HTTPTransport:
         """Create HTTP transport and initialize connection."""
-        transport = HTTPTransport(endpoint)
+        transport = HTTPTransport(endpoint, auth_token, client_id, client_secret)
         await transport.initialize()
         return transport
 
     @staticmethod
-    def get_supported_transports() -> List[str]:
+    def get_supported_transports() -> list[str]:
         """Get list of supported transport types."""
         return ["stdio", "http"]
 
     @staticmethod
     def validate_transport_args(
         transport_type: str,
-        command_args: Optional[List[str]] = None,
-        endpoint: Optional[str] = None
+        command_args: list[str] | None = None,
+        endpoint: str | None = None
     ) -> None:
         """Validate transport arguments without creating transport."""
         if transport_type not in TransportFactory.get_supported_transports():

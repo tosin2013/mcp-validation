@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from .base import BaseValidator, ValidationContext, ValidatorResult
 
@@ -19,7 +19,7 @@ class ProtocolValidator(BaseValidator):
         return "Basic MCP protocol compliance validation"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return []  # No dependencies - this is the foundation
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -69,7 +69,7 @@ class ProtocolValidator(BaseValidator):
         )
 
     async def _test_initialize(
-        self, context: ValidationContext, errors: List[str], data: Dict[str, Any]
+        self, context: ValidationContext, errors: list[str], data: dict[str, Any]
     ) -> bool:
         """Test the initialize request/response."""
         try:
@@ -121,7 +121,7 @@ class ProtocolValidator(BaseValidator):
             errors.append(f"Initialize request failed: {str(e)}")
             return False
 
-    async def _send_initialized(self, context: ValidationContext, errors: List[str]) -> None:
+    async def _send_initialized(self, context: ValidationContext, errors: list[str]) -> None:
         """Send the initialized notification."""
         try:
             await context.transport.send_notification("notifications/initialized")

@@ -3,7 +3,6 @@
 import argparse
 import asyncio
 import sys
-from typing import Dict, List, Optional
 
 from ..config.settings import ConfigurationManager, load_config_from_env
 from ..core.validator import MCPValidationOrchestrator
@@ -11,7 +10,7 @@ from ..reporting.console import ConsoleReporter, print_profile_info, print_valid
 from ..reporting.json_report import JSONReporter
 
 
-def parse_env_args(env_args: List[str]) -> Dict[str, str]:
+def parse_env_args(env_args: list[str]) -> dict[str, str]:
     """Parse environment variable arguments in KEY=VALUE format."""
     env_vars = {}
     for env_arg in env_args:
@@ -22,7 +21,7 @@ def parse_env_args(env_args: List[str]) -> Dict[str, str]:
     return env_vars
 
 
-def detect_runtime_command(command_args: List[str]) -> Optional[str]:
+def detect_runtime_command(command_args: list[str]) -> str | None:
     """Auto-detect runtime command from MCP server command arguments."""
     if not command_args:
         return None
@@ -75,7 +74,7 @@ def detect_runtime_command(command_args: List[str]) -> Optional[str]:
     return None
 
 
-def is_container_runtime_command(command_args: List[str]) -> bool:
+def is_container_runtime_command(command_args: list[str]) -> bool:
     """Check if command is a container runtime command (docker/podman run)."""
     if not command_args or len(command_args) < 3:
         return False
@@ -95,6 +94,12 @@ Configuration Examples:
 
   # Use HTTP transport
   mcp-validate --transport http --endpoint http://localhost:3000/mcp
+
+  # Use HTTP transport with OAuth Bearer token
+  mcp-validate --transport http --endpoint http://localhost:3000/mcp --auth-token your_bearer_token
+
+  # Use HTTP transport with OAuth Dynamic Client Registration
+  mcp-validate --transport http --endpoint http://localhost:3000/mcp --client-id your_client_id --client-secret your_secret
 
   # Use specific profile with stdio transport
   mcp-validate --profile security_focused -- python server.py
@@ -206,6 +211,25 @@ Environment Variables:
         "--endpoint",
         metavar="URL",
         help="HTTP endpoint URL for http transport (e.g., http://localhost:3000/mcp)",
+    )
+
+    # OAuth 2.0 authentication options
+    parser.add_argument(
+        "--auth-token",
+        metavar="TOKEN",
+        help="OAuth 2.0 Bearer token for authenticated HTTP transport",
+    )
+
+    parser.add_argument(
+        "--client-id",
+        metavar="ID",
+        help="OAuth 2.0 client ID for Dynamic Client Registration",
+    )
+
+    parser.add_argument(
+        "--client-secret",
+        metavar="SECRET",
+        help="OAuth 2.0 client secret for Dynamic Client Registration",
     )
 
     return parser
@@ -386,6 +410,10 @@ async def main():
             print(f"Testing MCP server: {' '.join(command_args)}")
         elif args.transport == "http":
             print(f"Testing MCP endpoint: {args.endpoint}")
+            if getattr(args, 'auth_token', None):
+                print("Authentication: OAuth Bearer token provided")
+            elif getattr(args, 'client_id', None):
+                print(f"Authentication: OAuth Dynamic Client Registration (Client ID: {args.client_id})")
         print(f"Using profile: {active_profile.name}")
         if args.repo_url:
             print(f"Repository URL: {args.repo_url}")
@@ -410,6 +438,9 @@ async def main():
             verbose=args.verbose,
             transport_type=args.transport,
             endpoint=args.endpoint,
+            auth_token=getattr(args, 'auth_token', None),
+            client_id=getattr(args, 'client_id', None),
+            client_secret=getattr(args, 'client_secret', None),
         )
 
         # Display results

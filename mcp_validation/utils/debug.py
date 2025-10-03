@@ -3,7 +3,7 @@
 import os
 import shlex
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Global debug and verbose state - set by CLI arguments
 _debug_enabled = False
@@ -55,7 +55,7 @@ def get_timestamp() -> str:
     return datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
 
-def format_command_for_display(command_args: List[str]) -> str:
+def format_command_for_display(command_args: list[str]) -> str:
     """Format command arguments for safe display."""
     if not command_args:
         return "<empty command>"
@@ -65,7 +65,7 @@ def format_command_for_display(command_args: List[str]) -> str:
     return " ".join(quoted_args)
 
 
-def get_execution_context() -> Dict[str, Any]:
+def get_execution_context() -> dict[str, Any]:
     """Get current execution context for debugging."""
     return {
         "current_directory": os.getcwd(),
@@ -78,7 +78,7 @@ def get_execution_context() -> Dict[str, Any]:
     }
 
 
-def log_execution_start(command_args: List[str], env_vars: Optional[Dict[str, str]] = None) -> None:
+def log_execution_start(command_args: list[str], env_vars: dict[str, str] | None = None) -> None:
     """Log the start of process execution with full context."""
     if not is_debug_enabled():
         return

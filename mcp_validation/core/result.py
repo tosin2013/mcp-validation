@@ -1,7 +1,7 @@
 """Result data structures for MCP validation."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -9,19 +9,19 @@ class MCPValidationResult:
     """Legacy result structure for backward compatibility."""
 
     is_valid: bool
-    errors: List[str]
-    warnings: List[str]
-    server_info: Dict[str, Any]
-    capabilities: Dict[str, Any]
+    errors: list[str]
+    warnings: list[str]
+    server_info: dict[str, Any]
+    capabilities: dict[str, Any]
     execution_time: float
-    tools: List[str] = field(default_factory=list)
-    prompts: List[str] = field(default_factory=list)
-    resources: List[str] = field(default_factory=list)
-    mcp_scan_results: Optional[Dict[str, Any]] = None
-    checklist: Optional[Dict[str, Any]] = None
-    mcp_scan_file: Optional[str] = None
-    ping_result: Optional[Dict[str, Any]] = None
-    error_compliance: Optional[Dict[str, Any]] = None
+    tools: list[str] = field(default_factory=list)
+    prompts: list[str] = field(default_factory=list)
+    resources: list[str] = field(default_factory=list)
+    mcp_scan_results: dict[str, Any] | None = None
+    checklist: dict[str, Any] | None = None
+    mcp_scan_file: str | None = None
+    ping_result: dict[str, Any] | None = None
+    error_compliance: dict[str, Any] | None = None
 
 
 @dataclass
@@ -30,9 +30,9 @@ class ValidatorResult:
 
     validator_name: str
     passed: bool
-    errors: List[str]
-    warnings: List[str]
-    data: Dict[str, Any]
+    errors: list[str]
+    warnings: list[str]
+    data: dict[str, Any]
     execution_time: float
 
 
@@ -43,10 +43,10 @@ class ValidationSession:
     profile_name: str
     overall_success: bool
     execution_time: float
-    validator_results: List[ValidatorResult]
-    errors: List[str]
-    warnings: List[str]
-    command_args: List[str] = None
+    validator_results: list[ValidatorResult]
+    errors: list[str]
+    warnings: list[str]
+    command_args: list[str] = None
 
     def to_legacy_result(self) -> MCPValidationResult:
         """Convert to legacy MCPValidationResult for backward compatibility."""

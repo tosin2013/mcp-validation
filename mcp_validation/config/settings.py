@@ -3,7 +3,7 @@
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -12,8 +12,8 @@ class ValidatorConfig:
 
     enabled: bool = True
     required: bool = False
-    timeout: Optional[float] = None
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    timeout: float | None = None
+    parameters: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -22,7 +22,7 @@ class ValidationProfile:
 
     name: str
     description: str
-    validators: Dict[str, ValidatorConfig] = field(default_factory=dict)
+    validators: dict[str, ValidatorConfig] = field(default_factory=dict)
     global_timeout: float = 30.0
     continue_on_failure: bool = True
     parallel_execution: bool = False
@@ -107,9 +107,9 @@ class ConfigurationManager:
         ),
     }
 
-    def __init__(self, config_file: Optional[str] = None):
+    def __init__(self, config_file: str | None = None):
         self.config_file = config_file
-        self.profiles: Dict[str, ValidationProfile] = self.DEFAULT_PROFILES.copy()
+        self.profiles: dict[str, ValidationProfile] = self.DEFAULT_PROFILES.copy()
         self.active_profile: str = "comprehensive"
 
         if config_file and os.path.exists(config_file):
@@ -182,7 +182,7 @@ class ConfigurationManager:
             raise ValueError(f"Profile '{profile_name}' not found")
         self.active_profile = profile_name
 
-    def list_profiles(self) -> List[str]:
+    def list_profiles(self) -> list[str]:
         """List all available profile names."""
         return list(self.profiles.keys())
 
@@ -190,7 +190,7 @@ class ConfigurationManager:
         """Create or update a validation profile."""
         self.profiles[profile.name] = profile
 
-    def get_validator_config(self, validator_name: str) -> Optional[ValidatorConfig]:
+    def get_validator_config(self, validator_name: str) -> ValidatorConfig | None:
         """Get configuration for a specific validator in the active profile."""
         active_profile = self.get_active_profile()
         return active_profile.validators.get(validator_name)
