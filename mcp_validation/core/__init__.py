@@ -1,7 +1,7 @@
 """Core validation components."""
 
 from .result import MCPValidationResult, ValidationSession
-from .transport import JSONRPCTransport
+from .transport import MCPTransport, StdioTransport, JSONRPCTransport
 from .validator import MCPValidationOrchestrator, ValidatorRegistry
 
 __all__ = [
@@ -9,5 +9,7 @@ __all__ = [
     "MCPValidationResult",
     "MCPValidationOrchestrator",
     "ValidatorRegistry",
+    "MCPTransport",
+    "StdioTransport",
     "JSONRPCTransport",
 ]

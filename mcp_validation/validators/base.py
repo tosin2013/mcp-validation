@@ -5,19 +5,23 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from ..core.transport import JSONRPCTransport
+from ..core.transport import MCPTransport
 
 
 @dataclass
 class ValidationContext:
-    """Context passed to validators containing process and shared state."""
+    """Context passed to validators containing transport and shared state."""
 
-    process: asyncio.subprocess.Process
     server_info: Dict[str, Any]
     capabilities: Dict[str, Any]
     timeout: float = 30.0
     command_args: Optional[List[str]] = None
-    transport: Optional[JSONRPCTransport] = None
+    transport: Optional[MCPTransport] = None
+    # Optional process for stdio transport compatibility
+    process: Optional[asyncio.subprocess.Process] = None
+    # New fields for HTTP transport
+    endpoint: Optional[str] = None
+    transport_type: str = "stdio"
 
 
 @dataclass

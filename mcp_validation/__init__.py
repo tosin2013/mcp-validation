@@ -17,7 +17,7 @@ from .config.settings import (
     load_config_from_env,
 )
 from .core.result import MCPValidationResult, ValidationSession, ValidatorResult
-from .core.transport import JSONRPCTransport
+from .core.transport import MCPTransport, StdioTransport, JSONRPCTransport
 
 # Core components
 from .core.validator import MCPValidationOrchestrator, ValidatorRegistry
@@ -39,6 +39,8 @@ __all__ = [
     "MCPValidationResult",
     "ValidatorResult",
     "ValidationContext",
+    "MCPTransport",
+    "StdioTransport",
     "JSONRPCTransport",
     # Configuration
     "ConfigurationManager",

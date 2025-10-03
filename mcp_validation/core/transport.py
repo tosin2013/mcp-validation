@@ -1,12 +1,49 @@
-"""JSON-RPC transport layer for MCP communication."""
+"""Transport layer for MCP communication."""
 
 import asyncio
 import json
+from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 
-class JSONRPCTransport:
-    """Handles JSON-RPC communication with MCP servers."""
+class MCPTransport(ABC):
+    """Abstract base class for MCP transport implementations."""
+
+    @abstractmethod
+    async def send_request(self, method: str, params: Optional[Dict[str, Any]] = None) -> None:
+        """Send a JSON-RPC request."""
+        pass
+
+    @abstractmethod
+    async def send_notification(self, method: str, params: Optional[Dict[str, Any]] = None) -> None:
+        """Send a JSON-RPC notification."""
+        pass
+
+    @abstractmethod
+    async def send_and_receive(
+        self, method: str, params: Optional[Dict[str, Any]] = None, timeout: float = 5.0
+    ) -> Dict[str, Any]:
+        """Send request and wait for response."""
+        pass
+
+    @abstractmethod
+    async def read_response(self, timeout: float = 5.0) -> Dict[str, Any]:
+        """Read and parse a response."""
+        pass
+
+    @abstractmethod
+    def parse_response(self, response_line: str) -> Dict[str, Any]:
+        """Parse a response line."""
+        pass
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Close the transport connection."""
+        pass
+
+
+class StdioTransport(MCPTransport):
+    """Handles JSON-RPC communication with MCP servers via stdio."""
 
     def __init__(self, process: asyncio.subprocess.Process):
         self.process = process
@@ -61,3 +98,24 @@ class JSONRPCTransport:
         """Send request and wait for response."""
         await self.send_request(method, params)
         return await self.read_response(timeout)
+
+    async def close(self) -> None:
+        """Close the transport connection."""
+        if self.process and self.process.returncode is None:
+            try:
+                if self.process.stdin:
+                    self.process.stdin.close()
+                    await self.process.stdin.wait_closed()
+            except Exception:
+                pass
+
+            self.process.terminate()
+            try:
+                await asyncio.wait_for(self.process.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
+                self.process.kill()
+                await self.process.wait()
+
+
+# Legacy alias for backward compatibility
+JSONRPCTransport = StdioTransport

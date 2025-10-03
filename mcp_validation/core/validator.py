@@ -16,7 +16,7 @@ from ..utils.debug import (
 )
 from ..validators.base import BaseValidator, ValidationContext, ValidatorResult
 from .result import ValidationSession
-from .transport import JSONRPCTransport
+from .transport import StdioTransport
 
 
 def _inject_container_env_vars(command_args: List[str], env_vars: Dict[str, str]) -> List[str]:
@@ -232,15 +232,16 @@ class MCPValidationOrchestrator:
 
             # Create transport and validation context
             log_execution_step("Setting up validation context")
-            transport = JSONRPCTransport(process)
+            transport = StdioTransport(process)
             context = ValidationContext(
-                process=process,
                 server_info={},
                 capabilities={},
                 timeout=profile.global_timeout,
                 command_args=final_command_args,
+                transport=transport,
+                process=process,
+                transport_type="stdio",
             )
-            context.transport = transport
 
             # Create and configure validators
             log_execution_step("Creating validators", f"Profile: {profile.name}")
