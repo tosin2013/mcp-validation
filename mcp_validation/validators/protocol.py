@@ -73,11 +73,11 @@ class ProtocolValidator(BaseValidator):
     ) -> bool:
         """Test the initialize request/response."""
         try:
-            # Send initialize request
+            # Send initialize request with latest protocol version
             init_params = {
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": "2025-06-18",
                 "capabilities": {"roots": {"listChanged": True}, "sampling": {}},
-                "clientInfo": {"name": "mcp-validator", "version": "1.0.0"},
+                "clientInfo": {"name": "mcp-validator", "version": "2.0.0"},
             }
 
             response = await context.transport.send_and_receive(
@@ -106,10 +106,11 @@ class ProtocolValidator(BaseValidator):
             data["capabilities"] = result.get("capabilities", {})
             data["protocol_version"] = result.get("protocolVersion")
 
-            # Validate protocol version
+            # Validate protocol version - support multiple MCP versions
             protocol_version = result.get("protocolVersion")
-            if protocol_version != "2024-11-05":
-                errors.append(f"Unsupported protocol version: {protocol_version}")
+            supported_versions = ["2024-11-05", "2025-03-26", "2025-06-18"]
+            if protocol_version not in supported_versions:
+                errors.append(f"Unsupported protocol version: {protocol_version} (supported: {', '.join(supported_versions)})")
 
             return len(errors) == 0
 

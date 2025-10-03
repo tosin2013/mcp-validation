@@ -54,7 +54,7 @@ class HTTPTransport(MCPTransport):
         """Establish MCP session via initialize sequence."""
         # Send InitializeRequest
         init_params = {
-            "protocolVersion": "2024-11-05",
+            "protocolVersion": "2025-06-18",
             "capabilities": {"roots": {"listChanged": True}},
             "clientInfo": {"name": "mcp-validate", "version": "2.0.0"}
         }
@@ -85,7 +85,7 @@ class HTTPTransport(MCPTransport):
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
-            "MCP-Protocol-Version": "2024-11-05"
+            "MCP-Protocol-Version": "2025-06-18"
         }
 
         if self.session_id:
@@ -117,7 +117,7 @@ class HTTPTransport(MCPTransport):
         """Send POST notification with proper headers."""
         headers = {
             "Content-Type": "application/json",
-            "MCP-Protocol-Version": "2024-11-05"
+            "MCP-Protocol-Version": "2025-06-18"
         }
 
         if self.session_id:
@@ -173,7 +173,7 @@ class HTTPTransport(MCPTransport):
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
-            "MCP-Protocol-Version": "2024-11-05"
+            "MCP-Protocol-Version": "2025-06-18"
         }
 
         if self.session_id:
