@@ -17,7 +17,7 @@ This tool validates MCP servers by:
 ## Features
 
 - ✅ **Protocol Validation**: Complete MCP handshake and capability testing
-- ✅ **Multi-Transport Support**: Both stdio and HTTP transports with streamable HTTP support
+- ✅ **Multi-Transport Support**: stdio, HTTP, and SSE transports with full OAuth 2.0 support
 - ✅ **OAuth 2.0 Authentication**: Full OAuth 2.0 Dynamic Client Registration (RFC 7591)
 - ✅ **Automatic Browser Opening**: Seamless OAuth authentication flow
 - ✅ **Security Scanning**: Integrated mcp-scan vulnerability analysis
@@ -79,9 +79,22 @@ mcp-validate --transport http --endpoint https://api.example.com/mcp \
 mcp-validate --transport http --endpoint http://localhost:3000/mcp
 ```
 
-### OAuth 2.0 Authentication
+### SSE Transport Validation
 
-The tool supports three OAuth authentication methods for HTTP transport:
+```bash
+# Validate SSE endpoints with Bearer token authentication
+mcp-validate --transport sse --endpoint https://mcp.example.com/sse --auth-token YOUR_TOKEN
+
+# SSE endpoint without authentication
+mcp-validate --transport sse --endpoint https://public.mcp.example.com/sse
+```
+
+### Authentication
+
+The tool supports different authentication methods depending on the transport:
+
+**SSE Transport**: Simple Bearer token authentication
+**HTTP Transport**: Full OAuth 2.0 support with three authentication methods:
 
 #### 1. Dynamic Client Registration (Automatic)
 ```bash
@@ -123,6 +136,23 @@ mcp-validate --transport http --endpoint https://api.example.com/mcp \
 - **Secure token exchange** using PKCE (Proof Key for Code Exchange)
 - **5-minute timeout** for user authentication
 
+### With Profiles and Advanced Features
+
+```bash
+# Use specific validation profile
+mcp-validate --profile security_focused -- python server.py
+
+# List available profiles and validators
+mcp-validate --list-profiles
+mcp-validate --list-validators
+
+# Custom configuration with selective validators
+mcp-validate --config ./custom-config.json --enable ping --disable security -- node server.js
+
+# Repository validation for OSS compliance
+mcp-validate --repo-url https://github.com/user/mcp-server -- python server.py
+```
+
 ### With Environment Variables
 
 ```bash
@@ -149,14 +179,17 @@ mcp-validate \
   -- npx -y some-mcp-server@latest
 ```
 
-### Security Analysis Options
+### Advanced Debugging and Analysis
 
 ```bash
+# Enable detailed debug output for troubleshooting
+mcp-validate --debug -- python server.py
+
 # Skip mcp-scan for faster validation
 mcp-validate --skip-mcp-scan python server.py
 
-# Full validation with security scan
-mcp-validate --timeout 120 --json-report report.json python server.py
+# Full validation with security scan and detailed reporting
+mcp-validate --debug --timeout 120 --json-report report.json python server.py
 ```
 
 ### Programmatic Usage
@@ -192,16 +225,25 @@ asyncio.run(test_server())
 | Option | Description | Example |
 |--------|-------------|---------|
 | `command` | Command and arguments to run the MCP server (stdio) | `-- python server.py` |
-| `--transport TYPE` | Transport type: `stdio` (default) or `http` | `--transport http` |
-| `--endpoint URL` | HTTP endpoint URL (required for HTTP transport) | `--endpoint https://api.example.com/mcp` |
-| `--auth-token TOKEN` | OAuth Bearer token for HTTP authentication | `--auth-token your_token` |
+| `--transport TYPE` | Transport type: `stdio` (default), `http`, or `sse` | `--transport sse` |
+| `--endpoint URL` | HTTP/SSE endpoint URL (required for http/sse transports) | `--endpoint https://api.example.com/mcp` |
+| `--auth-token TOKEN` | OAuth Bearer token for HTTP/SSE authentication | `--auth-token your_token` |
 | `--client-id ID` | OAuth client ID for pre-registered applications | `--client-id your_client_id` |
 | `--client-secret SECRET` | OAuth client secret (used with --client-id) | `--client-secret your_secret` |
+| `--config FILE` | Configuration file path | `--config ./my-config.json` |
+| `--profile NAME` | Validation profile to use | `--profile security_focused` |
 | `--env KEY=VALUE` | Set environment variables (repeatable) | `--env HOST=localhost` |
-| `--timeout SECONDS` | Validation timeout in seconds (default: 30) | `--timeout 60` |
+| `--enable VALIDATOR` | Enable specific validator | `--enable ping` |
+| `--disable VALIDATOR` | Disable specific validator | `--disable security` |
+| `--list-profiles` | List available validation profiles | `--list-profiles` |
+| `--list-validators` | List available validators | `--list-validators` |
+| `--timeout SECONDS` | Global timeout override in seconds | `--timeout 60` |
 | `--verbose` | Show detailed output including warnings | `--verbose` |
+| `--debug` | Enable detailed debug output with execution tracking | `--debug` |
 | `--skip-mcp-scan` | Skip mcp-scan security analysis | `--skip-mcp-scan` |
 | `--json-report FILE` | Export detailed JSON report to file | `--json-report report.json` |
+| `--repo-url URL` | Repository URL to validate for OSS compliance | `--repo-url https://github.com/user/repo` |
+| `--runtime-command CMD` | Runtime command to validate (auto-detected if not specified) | `--runtime-command uv` |
 
 ## Validation Process
 
