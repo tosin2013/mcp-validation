@@ -4,6 +4,7 @@ import asyncio
 import os
 
 from .http_transport import HTTPTransport
+from .sse_transport import SSETransport
 from .transport import MCPTransport, StdioTransport
 
 
@@ -18,7 +19,7 @@ class TransportFactory:
         env_vars: dict[str, str] | None = None,
         auth_token: str | None = None,
         client_id: str | None = None,
-        client_secret: str | None = None
+        client_secret: str | None = None,
     ) -> MCPTransport:
         """Create and initialize transport based on type."""
 
@@ -30,15 +31,21 @@ class TransportFactory:
         elif transport_type == "http":
             if not endpoint:
                 raise ValueError("Endpoint URL required for http transport")
-            return await TransportFactory._create_http_transport(endpoint, auth_token, client_id, client_secret)
+            return await TransportFactory._create_http_transport(
+                endpoint, auth_token, client_id, client_secret
+            )
+
+        elif transport_type == "sse":
+            if not endpoint:
+                raise ValueError("Endpoint URL required for sse transport")
+            return await TransportFactory._create_sse_transport(endpoint, auth_token)
 
         else:
             raise ValueError(f"Unsupported transport type: {transport_type}")
 
     @staticmethod
     async def _create_stdio_transport(
-        command_args: list[str],
-        env_vars: dict[str, str] | None = None
+        command_args: list[str], env_vars: dict[str, str] | None = None
     ) -> StdioTransport:
         """Create stdio transport by launching subprocess."""
         from ..core.validator import _inject_container_env_vars
@@ -75,7 +82,7 @@ class TransportFactory:
         endpoint: str,
         auth_token: str | None = None,
         client_id: str | None = None,
-        client_secret: str | None = None
+        client_secret: str | None = None,
     ) -> HTTPTransport:
         """Create HTTP transport and initialize connection."""
         transport = HTTPTransport(endpoint, auth_token, client_id, client_secret)
@@ -83,15 +90,20 @@ class TransportFactory:
         return transport
 
     @staticmethod
+    async def _create_sse_transport(endpoint: str, auth_token: str | None = None) -> SSETransport:
+        """Create SSE transport and initialize connection."""
+        transport = SSETransport(endpoint, auth_token)
+        await transport.initialize()
+        return transport
+
+    @staticmethod
     def get_supported_transports() -> list[str]:
         """Get list of supported transport types."""
-        return ["stdio", "http"]
+        return ["stdio", "http", "sse"]
 
     @staticmethod
     def validate_transport_args(
-        transport_type: str,
-        command_args: list[str] | None = None,
-        endpoint: str | None = None
+        transport_type: str, command_args: list[str] | None = None, endpoint: str | None = None
     ) -> None:
         """Validate transport arguments without creating transport."""
         if transport_type not in TransportFactory.get_supported_transports():
@@ -103,5 +115,10 @@ class TransportFactory:
         elif transport_type == "http":
             if not endpoint:
                 raise ValueError("Endpoint URL required for http transport")
+            if not endpoint.startswith(("http://", "https://")):
+                raise ValueError("Endpoint must be a valid HTTP URL (http:// or https://)")
+        elif transport_type == "sse":
+            if not endpoint:
+                raise ValueError("Endpoint URL required for sse transport")
             if not endpoint.startswith(("http://", "https://")):
                 raise ValueError("Endpoint must be a valid HTTP URL (http:// or https://)")

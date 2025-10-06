@@ -64,7 +64,7 @@ class SimpleTokenStorage(TokenStorage):
                     access_token=token,
                     refresh_token=self._tokens.refresh_token,
                     expires_in=self._tokens.expires_in,
-                    token_type=self._tokens.token_type
+                    token_type=self._tokens.token_type,
                 )
 
     async def clear_tokens(self) -> None:
@@ -76,8 +76,13 @@ class SimpleTokenStorage(TokenStorage):
 class HTTPTransport(MCPTransport):
     """HTTP-based MCP transport using MCP SDK's streamablehttp_client with OAuth 2.0 support."""
 
-    def __init__(self, endpoint: str, auth_token: str | None = None,
-                 client_id: str | None = None, client_secret: str | None = None):
+    def __init__(
+        self,
+        endpoint: str,
+        auth_token: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
+    ):
         self.endpoint = endpoint
         self.auth_token = auth_token
         self.client_id = client_id
@@ -110,7 +115,9 @@ class HTTPTransport(MCPTransport):
             verbose_log("🔑 Using pre-registered client credentials")
             return self._create_pre_registered_oauth_provider()
         else:
-            verbose_log("🔧 No static OAuth credentials provided, attempting dynamic client registration")
+            verbose_log(
+                "🔧 No static OAuth credentials provided, attempting dynamic client registration"
+            )
             return self._create_dynamic_oauth_provider()
 
     def _create_token_oauth_provider(self) -> OAuthClientProvider | None:
@@ -124,7 +131,7 @@ class HTTPTransport(MCPTransport):
                 access_token=self.auth_token,
                 token_type="Bearer",
                 expires_in=3600,  # Default 1 hour expiry
-                refresh_token=None
+                refresh_token=None,
             )
 
             # Pre-populate the token storage with the provided token
@@ -132,9 +139,7 @@ class HTTPTransport(MCPTransport):
             token_storage._tokens = oauth_token
 
             # Create minimal client metadata for token-based auth
-            client_metadata_dict = {
-                "scope": "mcp"
-            }
+            client_metadata_dict = {"scope": "mcp"}
 
             verbose_log(f"📋 Token-based auth metadata: {client_metadata_dict}")
             client_metadata = OAuthClientMetadata.model_validate(client_metadata_dict)
@@ -147,7 +152,9 @@ class HTTPTransport(MCPTransport):
 
             # Dummy callback handlers since we already have a token
             async def redirect_handler(url: str) -> None:
-                verbose_log(f"🔄 OAuth redirect handler called (should not happen with token): {url}")
+                verbose_log(
+                    f"🔄 OAuth redirect handler called (should not happen with token): {url}"
+                )
 
             async def callback_handler() -> tuple[str, str | None]:
                 verbose_log("📞 OAuth callback handler called (should not happen with token)")
@@ -160,7 +167,7 @@ class HTTPTransport(MCPTransport):
                 client_metadata=client_metadata,
                 storage=token_storage,
                 redirect_handler=redirect_handler,
-                callback_handler=callback_handler
+                callback_handler=callback_handler,
             )
             verbose_log("✅ OAuth provider created with access token")
             return oauth_provider
@@ -203,6 +210,7 @@ class HTTPTransport(MCPTransport):
 
                 # Automatically open the browser like the MCP SDK simple-auth-client example
                 import webbrowser
+
                 try:
                     webbrowser.open(url)
                     print("✅ Browser opened successfully")
@@ -228,7 +236,7 @@ class HTTPTransport(MCPTransport):
                 client_metadata=client_metadata,
                 storage=token_storage,
                 redirect_handler=redirect_handler,
-                callback_handler=callback_handler
+                callback_handler=callback_handler,
             )
             verbose_log("✅ OAuth provider created for pre-registered client")
             return oauth_provider
@@ -244,9 +252,7 @@ class HTTPTransport(MCPTransport):
             token_storage = SimpleTokenStorage()
 
             # Create minimal client metadata like mcp-remote
-            client_metadata_dict = {
-                "scope": "mcp"  # Just the MCP scope like mcp-remote
-            }
+            client_metadata_dict = {"scope": "mcp"}  # Just the MCP scope like mcp-remote
 
             verbose_log(f"📋 Minimal client metadata: {client_metadata_dict}")
             client_metadata = OAuthClientMetadata.model_validate(client_metadata_dict)
@@ -261,7 +267,9 @@ class HTTPTransport(MCPTransport):
             async def redirect_handler(url: str) -> None:
                 verbose_log(f"🔄 OAuth redirect handler called with URL: {url}")
                 # For validation tool, we don't open browser automatically
-                verbose_log("⚠️ OAuth requires browser authentication - not supported in validation mode")
+                verbose_log(
+                    "⚠️ OAuth requires browser authentication - not supported in validation mode"
+                )
 
             async def callback_handler() -> tuple[str, str | None]:
                 verbose_log("📞 OAuth callback handler called")
@@ -275,7 +283,7 @@ class HTTPTransport(MCPTransport):
                 client_metadata=client_metadata,
                 storage=token_storage,
                 redirect_handler=redirect_handler,
-                callback_handler=callback_handler
+                callback_handler=callback_handler,
             )
             verbose_log("✅ Minimal OAuth provider created")
             return oauth_provider
@@ -299,7 +307,7 @@ class HTTPTransport(MCPTransport):
                 "grant_types": ["authorization_code", "refresh_token"],
                 "response_types": ["code"],
                 "token_endpoint_auth_method": "none",  # No client secret for dynamic registration
-                "scope": "mcp"  # The key scope like mcp-remote
+                "scope": "mcp",  # The key scope like mcp-remote
             }
 
             verbose_log(f"📋 Dynamic registration metadata (minimal): {client_metadata_dict}")
@@ -319,6 +327,7 @@ class HTTPTransport(MCPTransport):
 
                 # Automatically open the browser like the MCP SDK simple-auth-client example
                 import webbrowser
+
                 try:
                     webbrowser.open(url)
                     print("✅ Browser opened successfully")
@@ -344,7 +353,7 @@ class HTTPTransport(MCPTransport):
                 client_metadata=client_metadata,
                 storage=token_storage,
                 redirect_handler=redirect_handler,
-                callback_handler=callback_handler
+                callback_handler=callback_handler,
             )
             verbose_log("✅ OAuth provider created for dynamic registration (minimal)")
             return oauth_provider
@@ -360,11 +369,15 @@ class HTTPTransport(MCPTransport):
         # Skip pre-flight check if OAuth credentials are provided OR if no credentials at all
         # OAuth (both pre-registered and dynamic registration) requires full browser flow which can't be tested in pre-flight
         if self.client_id and self.client_secret:
-            verbose_log("🔧 OAuth credentials provided, skipping pre-flight check (OAuth requires browser flow)")
+            verbose_log(
+                "🔧 OAuth credentials provided, skipping pre-flight check (OAuth requires browser flow)"
+            )
             return
 
         if not self.auth_token and not self.client_id and not self.client_secret:
-            verbose_log("🔧 No credentials provided, will attempt dynamic OAuth registration (skipping pre-flight check)")
+            verbose_log(
+                "🔧 No credentials provided, will attempt dynamic OAuth registration (skipping pre-flight check)"
+            )
             return
 
         try:
@@ -374,13 +387,15 @@ class HTTPTransport(MCPTransport):
                 headers = {
                     "Content-Type": "application/json",
                     "Accept": "application/json",
-                    "MCP-Protocol-Version": "2025-06-18"
+                    "MCP-Protocol-Version": "2025-06-18",
                 }
 
                 # Add auth token if available
                 if self.auth_token:
                     headers["Authorization"] = f"Bearer {self.auth_token}"
-                    verbose_log(f"🔑 Using auth token for pre-flight check: {self.auth_token[:10]}...")
+                    verbose_log(
+                        f"🔑 Using auth token for pre-flight check: {self.auth_token[:10]}..."
+                    )
 
                 # Simple test request (this will likely fail, but we want to see HOW it fails)
                 test_request = {
@@ -390,16 +405,13 @@ class HTTPTransport(MCPTransport):
                     "params": {
                         "protocolVersion": "2025-06-18",
                         "capabilities": {},
-                        "clientInfo": {"name": "mcp-validate-test", "version": "1.0.0"}
-                    }
+                        "clientInfo": {"name": "mcp-validate-test", "version": "1.0.0"},
+                    },
                 }
 
                 verbose_log("📤 Sending pre-flight test request...")
                 response = await client.post(
-                    self.endpoint,
-                    json=test_request,
-                    headers=headers,
-                    timeout=10.0
+                    self.endpoint, json=test_request, headers=headers, timeout=10.0
                 )
 
                 verbose_log(f"📥 Pre-flight response: {response.status_code}")
@@ -503,7 +515,9 @@ class HTTPTransport(MCPTransport):
                 # Clean up connection context if it was created
                 if self._connection_context:
                     try:
-                        await self._connection_context.__aexit__(type(connection_error), connection_error, connection_error.__traceback__)
+                        await self._connection_context.__aexit__(
+                            type(connection_error), connection_error, connection_error.__traceback__
+                        )
                     except Exception:
                         # Ignore cleanup errors to avoid masking the original error
                         pass
@@ -525,7 +539,9 @@ class HTTPTransport(MCPTransport):
                     ) from connection_error
                 else:
                     verbose_log(f"❌ HTTP connection failed: {connection_error}")
-                    raise ValueError(f"Failed to connect to {self.endpoint}: {connection_error}") from connection_error
+                    raise ValueError(
+                        f"Failed to connect to {self.endpoint}: {connection_error}"
+                    ) from connection_error
 
             # Create and initialize ClientSession for protocol communication
             verbose_log("🤝 Creating MCP client session...")
@@ -552,7 +568,9 @@ class HTTPTransport(MCPTransport):
                     ) from session_error
                 else:
                     verbose_log(f"❌ MCP session initialization failed: {session_error}")
-                    raise ValueError(f"Failed to initialize MCP session: {session_error}") from session_error
+                    raise ValueError(
+                        f"Failed to initialize MCP session: {session_error}"
+                    ) from session_error
 
             verbose_log("✅ HTTP transport and MCP session initialized successfully")
             self._initialized = True
@@ -629,20 +647,17 @@ class HTTPTransport(MCPTransport):
                             "tools": {},
                             "resources": {},
                             "prompts": {},
-                            "logging": {}
+                            "logging": {},
                         },
-                        "serverInfo": {
-                            "name": "HTTP MCP Server",
-                            "version": "unknown"
-                        }
-                    }
+                        "serverInfo": {"name": "HTTP MCP Server", "version": "unknown"},
+                    },
                 }
             elif method == "tools/list":
                 result = await self._client_session.list_tools()
                 return {
                     "jsonrpc": "2.0",
                     "id": 1,
-                    "result": {"tools": [tool.model_dump() for tool in result.tools]}
+                    "result": {"tools": [tool.model_dump() for tool in result.tools]},
                 }
             elif method == "tools/call":
                 tool_name = params.get("name") if params else None
@@ -653,29 +668,27 @@ class HTTPTransport(MCPTransport):
                 return {
                     "jsonrpc": "2.0",
                     "id": 1,
-                    "result": {"content": [content.model_dump() for content in result.content]}
+                    "result": {"content": [content.model_dump() for content in result.content]},
                 }
             elif method == "resources/list":
                 result = await self._client_session.list_resources()
                 return {
                     "jsonrpc": "2.0",
                     "id": 1,
-                    "result": {"resources": [resource.model_dump() for resource in result.resources]}
+                    "result": {
+                        "resources": [resource.model_dump() for resource in result.resources]
+                    },
                 }
             elif method == "prompts/list":
                 result = await self._client_session.list_prompts()
                 return {
                     "jsonrpc": "2.0",
                     "id": 1,
-                    "result": {"prompts": [prompt.model_dump() for prompt in result.prompts]}
+                    "result": {"prompts": [prompt.model_dump() for prompt in result.prompts]},
                 }
             elif method == "ping":
                 # Simple ping test - just return success if session is working
-                return {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "result": {"ping": "pong"}
-                }
+                return {"jsonrpc": "2.0", "id": 1, "result": {"ping": "pong"}}
             else:
                 # For other methods, we'll need to handle them as they come up
                 verbose_log(f"⚠️ Unsupported method for ClientSession: {method}")
@@ -684,8 +697,8 @@ class HTTPTransport(MCPTransport):
                     "id": 1,
                     "error": {
                         "code": -32601,
-                        "message": f"Method {method} not supported in HTTP transport"
-                    }
+                        "message": f"Method {method} not supported in HTTP transport",
+                    },
                 }
 
         except Exception as e:
@@ -754,7 +767,8 @@ class HTTPTransport(MCPTransport):
                     self.send_response(200)
                     self.send_header("Content-type", "text/html")
                     self.end_headers()
-                    self.wfile.write(b"""
+                    self.wfile.write(
+                        b"""
                     <html>
                     <body>
                         <h1>Authorization Successful!</h1>
@@ -762,13 +776,15 @@ class HTTPTransport(MCPTransport):
                         <script>setTimeout(() => window.close(), 2000);</script>
                     </body>
                     </html>
-                    """)
+                    """
+                    )
                 elif "error" in query_params:
                     callback_data["error"] = query_params["error"][0]
                     self.send_response(400)
                     self.send_header("Content-type", "text/html")
                     self.end_headers()
-                    self.wfile.write(f"""
+                    self.wfile.write(
+                        f"""
                     <html>
                     <body>
                         <h1>Authorization Failed</h1>
@@ -776,7 +792,8 @@ class HTTPTransport(MCPTransport):
                         <p>You can close this window and return to the terminal.</p>
                     </body>
                     </html>
-                    """.encode())
+                    """.encode()
+                    )
                 else:
                     self.send_response(404)
                     self.end_headers()
@@ -800,7 +817,7 @@ class HTTPTransport(MCPTransport):
 
             while time.time() - start_time < timeout:
                 if callback_data["authorization_code"]:
-                    verbose_log(f"✅ Received OAuth callback with authorization code")
+                    verbose_log("✅ Received OAuth callback with authorization code")
                     return callback_data["authorization_code"], callback_data["state"]
                 elif callback_data["error"]:
                     error = callback_data["error"]

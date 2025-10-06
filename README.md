@@ -94,6 +94,7 @@ mcp-validate --transport http --endpoint https://gitlab.com/api/v4/mcp
 # - Handle the OAuth callback automatically
 # - Continue with MCP validation
 ```
+![](images/dynamic_client.gif)
 
 #### 2. Pre-registered OAuth Application
 ```bash

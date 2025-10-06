@@ -111,7 +111,9 @@ class SecurityValidator(BaseValidator):
                         regular_codes.append(code)
 
                     if len(critical_codes) > 0:
-                        errors.append(f"Found {len(critical_codes)} critical issues: {critical_codes}")
+                        errors.append(
+                            f"Found {len(critical_codes)} critical issues: {critical_codes}"
+                        )
 
                     # Those not in the critical_code list are considered warnings.
                     if len(regular_codes) > 0:

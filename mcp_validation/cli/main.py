@@ -101,6 +101,12 @@ Configuration Examples:
   # Use HTTP transport with OAuth Dynamic Client Registration
   mcp-validate --transport http --endpoint http://localhost:3000/mcp --client-id your_client_id --client-secret your_secret
 
+  # Use SSE transport
+  mcp-validate --transport sse --endpoint https://example.com/sse
+
+  # Use SSE transport with authentication
+  mcp-validate --transport sse --endpoint https://example.com/sse --auth-token your_bearer_token
+
   # Use specific profile with stdio transport
   mcp-validate --profile security_focused -- python server.py
 
@@ -127,7 +133,11 @@ Environment Variables:
     )
 
     # Command arguments (everything after -- for stdio transport)
-    parser.add_argument("command", nargs=argparse.REMAINDER, help="Command and arguments to run the MCP server (use -- to separate tool options from server command)")
+    parser.add_argument(
+        "command",
+        nargs=argparse.REMAINDER,
+        help="Command and arguments to run the MCP server (use -- to separate tool options from server command)",
+    )
 
     # Configuration options
     parser.add_argument("--config", metavar="FILE", help="Configuration file path")
@@ -202,7 +212,7 @@ Environment Variables:
     # Transport options
     parser.add_argument(
         "--transport",
-        choices=["stdio", "http"],
+        choices=["stdio", "http", "sse"],
         default="stdio",
         help="Transport type to use for MCP communication (default: stdio)",
     )
@@ -266,12 +276,19 @@ async def main():
         # Validate transport-specific arguments
         if args.transport == "stdio":
             if not command_args:
-                parser.error("Command arguments required for stdio transport (use -- to separate options from command)")
+                parser.error(
+                    "Command arguments required for stdio transport (use -- to separate options from command)"
+                )
             if args.endpoint:
                 parser.error("--endpoint is not valid for stdio transport")
         elif args.transport == "http":
             if not args.endpoint:
                 parser.error("--endpoint is required for http transport")
+            if not args.endpoint.startswith(("http://", "https://")):
+                parser.error("--endpoint must be a valid HTTP URL (http:// or https://)")
+        elif args.transport == "sse":
+            if not args.endpoint:
+                parser.error("--endpoint is required for sse transport")
             if not args.endpoint.startswith(("http://", "https://")):
                 parser.error("--endpoint must be a valid HTTP URL (http:// or https://)")
         else:
@@ -408,14 +425,20 @@ async def main():
         print(f"Transport: {args.transport}")
         if args.transport == "stdio" and command_args:
             print(f"Testing MCP server: {' '.join(command_args)}")
-        elif args.transport == "http":
+        elif args.transport in ["http", "sse"]:
             print(f"Testing MCP endpoint: {args.endpoint}")
-            if getattr(args, 'auth_token', None):
+            if getattr(args, "auth_token", None):
                 print("Authentication: OAuth Bearer token provided")
-            elif getattr(args, 'client_id', None):
+            elif getattr(args, "client_id", None) and args.transport == "http":
                 print(f"Authentication: OAuth Pre-registered Client (Client ID: {args.client_id})")
-            else:
+            elif args.transport == "http":
                 print("Authentication: OAuth Dynamic Client Registration")
+            else:
+                # SSE transport - only show auth if auth_token is provided
+                if getattr(args, "auth_token", None):
+                    print("Authentication: Bearer token provided")
+                else:
+                    print("Authentication: None")
         print(f"Using profile: {active_profile.name}")
         if args.repo_url:
             print(f"Repository URL: {args.repo_url}")
@@ -440,9 +463,9 @@ async def main():
             verbose=args.verbose,
             transport_type=args.transport,
             endpoint=args.endpoint,
-            auth_token=getattr(args, 'auth_token', None),
-            client_id=getattr(args, 'client_id', None),
-            client_secret=getattr(args, 'client_secret', None),
+            auth_token=getattr(args, "auth_token", None),
+            client_id=getattr(args, "client_id", None),
+            client_secret=getattr(args, "client_secret", None),
         )
 
         # Display results

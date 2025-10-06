@@ -110,7 +110,9 @@ class ProtocolValidator(BaseValidator):
             protocol_version = result.get("protocolVersion")
             supported_versions = ["2024-11-05", "2025-03-26", "2025-06-18"]
             if protocol_version not in supported_versions:
-                errors.append(f"Unsupported protocol version: {protocol_version} (supported: {', '.join(supported_versions)})")
+                errors.append(
+                    f"Unsupported protocol version: {protocol_version} (supported: {', '.join(supported_versions)})"
+                )
 
             return len(errors) == 0
 

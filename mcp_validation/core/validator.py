@@ -216,12 +216,12 @@ class MCPValidationOrchestrator:
                 env_vars=env_vars,
                 auth_token=auth_token,
                 client_id=client_id,
-                client_secret=client_secret
+                client_secret=client_secret,
             )
             verbose_log("✅ Transport initialized successfully")
 
             # For stdio transport, we need to get the process for compatibility
-            if transport_type == "stdio" and hasattr(transport, 'process'):
+            if transport_type == "stdio" and hasattr(transport, "process"):
                 process = transport.process
                 final_command_args = command_args
                 log_execution_step("Process started", f"PID: {process.pid}")
@@ -245,7 +245,9 @@ class MCPValidationOrchestrator:
             verbose_log(f"Loading validation profile: {profile.name}")
             log_execution_step("Creating validators", f"Profile: {profile.name}")
             validators = self._create_validators(profile)
-            verbose_log(f"📋 Configured {len(validators)} validators: {', '.join([v.name for v in validators])}")
+            verbose_log(
+                f"📋 Configured {len(validators)} validators: {', '.join([v.name for v in validators])}"
+            )
             log_execution_step(
                 f"Configured {len(validators)} validators", f"Names: {[v.name for v in validators]}"
             )
@@ -415,7 +417,9 @@ class MCPValidationOrchestrator:
                 if result.warnings:
                     details += f", Warnings: {len(result.warnings)}"
 
-                verbose_log(f"{status_icon} {validator.name}: {status} ({validator_execution_time:.2f}s)")
+                verbose_log(
+                    f"{status_icon} {validator.name}: {status} ({validator_execution_time:.2f}s)"
+                )
                 log_validator_progress(validator.name, status, details)
 
                 # Update context with results (for dependent validators)
