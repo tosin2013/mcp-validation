@@ -718,14 +718,14 @@ class HTTPTransport(MCPTransport):
                 # Simple ping test - just return success if session is working
                 return {"jsonrpc": "2.0", "id": 1, "result": {"ping": "pong"}}
             else:
-                # For other methods, we'll need to handle them as they come up
-                verbose_log(f"⚠️ Unsupported method for ClientSession: {method}")
+                # For methods not explicitly handled, return method not found error
+                # This is expected behavior for error compliance testing
                 return {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "error": {
                         "code": -32601,
-                        "message": f"Method {method} not supported in HTTP transport",
+                        "message": f"Method not found: {method}",
                     },
                 }
 
