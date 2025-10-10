@@ -128,7 +128,7 @@ class ConsoleReporter:
 
         if passed_tests:
             tests_str = " & ".join(passed_tests)
-            print(f"    ⚠️  Error compliance: {tests_str} handling validated")
+            print(f"    ✅ Error compliance: {tests_str} handling validated")
 
         if compliance_issues:
             issue_count = len(compliance_issues)
