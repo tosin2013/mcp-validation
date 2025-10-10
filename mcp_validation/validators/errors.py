@@ -130,6 +130,14 @@ class ErrorComplianceValidator(BaseValidator):
         self, context: ValidationContext, warnings: list[str], data: dict[str, Any]
     ) -> None:
         """Test error response for malformed JSON-RPC requests."""
+        # This test only works with stdio transport where we can send raw malformed JSON
+        # HTTP/SSE transports use MCP SDK which validates JSON before sending
+        if not context.process or not hasattr(context.process, 'stdin'):
+            data["malformed_request_test"]["error"] = None
+            data["malformed_request_test"]["skipped"] = True
+            data["malformed_request_test"]["reason"] = "Only applicable to stdio transport"
+            return
+
         try:
             # Send malformed JSON request
             malformed_request = '{"jsonrpc": "2.0", "method": "test", "id": 1, "invalid_field":}\n'
