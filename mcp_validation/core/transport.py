@@ -97,16 +97,45 @@ class StdioTransport(MCPTransport):
         self, method: str, params: dict[str, Any] | None = None, timeout: float = 5.0
     ) -> dict[str, Any]:
         """Send request and wait for response."""
-        await self.send_request(method, params)
-        response = await self.read_response(timeout)
+        # Send request and capture the request ID
+        request = {"jsonrpc": "2.0", "id": self._get_next_id(), "method": method}
+        if params:
+            request["params"] = params
+        request_id = request["id"]
 
-        # Cache serverInfo from initialize response
-        if method == "initialize" and "result" in response:
-            result = response["result"]
-            if "serverInfo" in result:
-                self._server_info = result["serverInfo"]
+        request_json = json.dumps(request) + "\n"
+        self.process.stdin.write(request_json.encode())
+        await self.process.stdin.drain()
 
-        return response
+        # Read responses until we get the one matching our request ID
+        # Server may send notifications or other responses in between
+        start_time = asyncio.get_event_loop().time()
+        while True:
+            remaining_timeout = timeout - (asyncio.get_event_loop().time() - start_time)
+            if remaining_timeout <= 0:
+                raise asyncio.TimeoutError(f"Timeout waiting for response to request {request_id}")
+
+            response = await self.read_response(remaining_timeout)
+
+            # Check if this is a server-initiated request/notification (has 'method' field)
+            if "method" in response:
+                # This is a server->client request or notification, skip it
+                # TODO: Handle server requests properly
+                continue
+
+            # Check if this response matches our request ID
+            if response.get("id") == request_id:
+                # Cache serverInfo from initialize response
+                if method == "initialize" and "result" in response:
+                    result = response["result"]
+                    if "serverInfo" in result:
+                        self._server_info = result["serverInfo"]
+
+                return response
+
+            # Response doesn't match our request ID, skip it
+            # This might be a response to a different request
+            continue
 
     async def close(self) -> None:
         """Close the transport connection."""
