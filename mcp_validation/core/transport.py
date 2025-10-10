@@ -48,6 +48,7 @@ class StdioTransport(MCPTransport):
     def __init__(self, process: asyncio.subprocess.Process):
         self.process = process
         self.request_id = 0
+        self._server_info: dict[str, Any] | None = None
 
     def _get_next_id(self) -> int:
         """Get next request ID for JSON-RPC."""
@@ -97,7 +98,15 @@ class StdioTransport(MCPTransport):
     ) -> dict[str, Any]:
         """Send request and wait for response."""
         await self.send_request(method, params)
-        return await self.read_response(timeout)
+        response = await self.read_response(timeout)
+
+        # Cache serverInfo from initialize response
+        if method == "initialize" and "result" in response:
+            result = response["result"]
+            if "serverInfo" in result:
+                self._server_info = result["serverInfo"]
+
+        return response
 
     async def close(self) -> None:
         """Close the transport connection."""

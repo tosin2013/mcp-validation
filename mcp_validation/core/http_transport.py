@@ -96,6 +96,8 @@ class HTTPTransport(MCPTransport):
         self._client_session: ClientSession | None = None
         self._session_context = None
         self._initialized = False
+        self._server_info: dict[str, Any] | None = None
+        self._init_result = None
 
         # Validate endpoint URL
         parsed = urlparse(endpoint)
@@ -550,7 +552,17 @@ class HTTPTransport(MCPTransport):
 
             verbose_log("⚡ Initializing MCP session...")
             try:
-                await self._client_session.initialize()
+                init_result = await self._client_session.initialize()
+                # Store the initialize result to extract serverInfo
+                self._init_result = init_result
+                if init_result and hasattr(init_result, "serverInfo"):
+                    self._server_info = {
+                        "name": init_result.serverInfo.name,
+                        "version": init_result.serverInfo.version,
+                    }
+                    verbose_log(
+                        f"📋 Server info: {self._server_info['name']} v{self._server_info['version']}"
+                    )
             except Exception as session_error:
                 # Handle MCP session initialization errors (like authentication failures)
                 if "401" in str(session_error) or "Unauthorized" in str(session_error):
@@ -636,22 +648,38 @@ class HTTPTransport(MCPTransport):
         try:
             if method == "initialize":
                 # ClientSession was already initialized in transport.initialize()
-                # Return successful initialization response in JSON-RPC format
+                # Return successful initialization response in JSON-RPC format with real serverInfo
                 verbose_log("✅ Initialize request - session already initialized")
-                return {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "result": {
-                        "protocolVersion": "2025-06-18",
-                        "capabilities": {
-                            "tools": {},
-                            "resources": {},
-                            "prompts": {},
-                            "logging": {},
-                        },
-                        "serverInfo": {"name": "HTTP MCP Server", "version": "unknown"},
-                    },
+
+                # Build response from stored init_result
+                result_data = {
+                    "protocolVersion": (
+                        self._init_result.protocolVersion if self._init_result else "2025-06-18"
+                    ),
+                    "capabilities": {},
+                    "serverInfo": self._server_info
+                    or {"name": "HTTP MCP Server", "version": "unknown"},
                 }
+
+                # Add capabilities if available
+                if self._init_result and hasattr(self._init_result, "capabilities"):
+                    caps = self._init_result.capabilities
+                    result_data["capabilities"] = {
+                        "tools": caps.tools.model_dump() if hasattr(caps, "tools") and caps.tools else {},
+                        "resources": (
+                            caps.resources.model_dump()
+                            if hasattr(caps, "resources") and caps.resources
+                            else {}
+                        ),
+                        "prompts": (
+                            caps.prompts.model_dump() if hasattr(caps, "prompts") and caps.prompts else {}
+                        ),
+                        "logging": (
+                            caps.logging.model_dump() if hasattr(caps, "logging") and caps.logging else {}
+                        ),
+                    }
+
+                return {"jsonrpc": "2.0", "id": 1, "result": result_data}
             elif method == "tools/list":
                 result = await self._client_session.list_tools()
                 return {
