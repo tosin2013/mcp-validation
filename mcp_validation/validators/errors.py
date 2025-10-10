@@ -145,50 +145,91 @@ class ErrorComplianceValidator(BaseValidator):
             context.process.stdin.write(malformed_request.encode())
             await context.process.stdin.drain()
 
-            # Read response
-            timeout = self.config.get("timeout", 5.0)
-            response_line = await asyncio.wait_for(
-                context.process.stdout.readline(), timeout=timeout
-            )
+            # Read responses until we get one that's not a server-initiated message
+            # or timeout waiting for the error response
+            # Use shorter timeout since many servers silently ignore malformed JSON
+            timeout = self.config.get("malformed_timeout", 2.0)
+            start_time = asyncio.get_event_loop().time()
+            response = None
 
-            # Try to parse response
-            try:
-                response = context.transport.parse_response(response_line.decode())
+            while True:
+                remaining_timeout = timeout - (asyncio.get_event_loop().time() - start_time)
+                if remaining_timeout <= 0:
+                    # Timeout - server didn't respond to malformed request
+                    # This is acceptable behavior - servers may silently ignore malformed JSON
+                    data["malformed_request_test"]["error"] = None
+                    data["malformed_request_test"]["ignored"] = True
+                    if self.config.get("strict_malformed_handling", False):
+                        warnings.append(
+                            "Server did not respond to malformed JSON-RPC request (strict mode: should return parse error -32700)"
+                        )
+                    return
 
-                if "error" in response:
-                    error = response["error"]
-                    error_code = error.get("code")
-
-                    # Check for parse error code
-                    if error_code == -32700:  # Parse error
-                        data["malformed_request_test"]["passed"] = True
-                    elif isinstance(error_code, int):
-                        if self.config.get("strict_error_codes", False):
-                            warnings.append(
-                                f"Non-standard error code {error_code} for malformed JSON "
-                                f"(JSON-RPC 2.0 recommends -32700)"
-                            )
-                        data["malformed_request_test"]["passed"] = True
-
-                    data["malformed_request_test"]["details"] = {
-                        "code": error_code,
-                        "message": error.get("message", ""),
-                        "data": error.get("data"),
-                    }
-                else:
-                    data["malformed_request_test"]["error"] = "No error response for malformed JSON"
-                    warnings.append(
-                        "Server should return parse error for malformed JSON-RPC request"
+                try:
+                    response_line = await asyncio.wait_for(
+                        context.process.stdout.readline(), timeout=remaining_timeout
                     )
+                except asyncio.TimeoutError:
+                    # Timeout waiting for response - server silently ignored malformed request
+                    # This is acceptable behavior
+                    data["malformed_request_test"]["error"] = None
+                    data["malformed_request_test"]["ignored"] = True
+                    if self.config.get("strict_malformed_handling", False):
+                        warnings.append(
+                            "Server did not respond to malformed JSON-RPC request (strict mode: should return parse error -32700)"
+                        )
+                    return
 
-            except json.JSONDecodeError:
-                # Server sent invalid JSON response to malformed request
-                data["malformed_request_test"]["error"] = "Server sent invalid JSON response"
-                warnings.append("Server sent invalid JSON response to malformed request")
+                # Try to parse response
+                try:
+                    parsed_response = context.transport.parse_response(response_line.decode())
 
-        except asyncio.TimeoutError:
-            data["malformed_request_test"]["error"] = "Timeout"
-            warnings.append("Malformed request error test timed out")
+                    # Skip server-initiated requests/notifications (have 'method' field)
+                    if "method" in parsed_response:
+                        continue
+
+                    # This looks like a response to our malformed request
+                    response = parsed_response
+                    break
+
+                except json.JSONDecodeError:
+                    # Server sent invalid JSON - could be response to malformed request
+                    data["malformed_request_test"]["error"] = "Server sent invalid JSON response"
+                    warnings.append("Server sent invalid JSON response to malformed request")
+                    return
+
+            # Check if we got an error response
+            if response and "error" in response:
+                error = response["error"]
+                error_code = error.get("code")
+
+                # Check for parse error code
+                if error_code == -32700:  # Parse error
+                    data["malformed_request_test"]["passed"] = True
+                elif isinstance(error_code, int):
+                    if self.config.get("strict_error_codes", False):
+                        warnings.append(
+                            f"Non-standard error code {error_code} for malformed JSON "
+                            f"(JSON-RPC 2.0 recommends -32700)"
+                        )
+                    data["malformed_request_test"]["passed"] = True
+
+                data["malformed_request_test"]["details"] = {
+                    "code": error_code,
+                    "message": error.get("message", ""),
+                    "data": error.get("data"),
+                }
+            else:
+                # Got a response but no error field - server processed malformed JSON as valid
+                data["malformed_request_test"]["error"] = "Server processed malformed JSON as valid request"
+                if self.config.get("strict_malformed_handling", False):
+                    warnings.append(
+                        "Server processed malformed JSON-RPC request (strict mode: should return parse error -32700)"
+                    )
+                else:
+                    # In non-strict mode, just note it
+                    data["malformed_request_test"]["processed_as_valid"] = True
+
         except Exception as e:
             data["malformed_request_test"]["error"] = str(e)
             warnings.append(f"Malformed request error test failed: {str(e)}")
