@@ -161,7 +161,9 @@ class SecurityValidator(BaseValidator):
             elif context.transport_type in ("http", "sse"):
                 # HTTP/SSE transport requires URL
                 if not context.endpoint:
-                    warnings.append(f"mcp-scan requires endpoint URL for {context.transport_type} transport")
+                    warnings.append(
+                        f"mcp-scan requires endpoint URL for {context.transport_type} transport"
+                    )
                     return None, None
 
                 server_config = {
@@ -169,14 +171,12 @@ class SecurityValidator(BaseValidator):
                     "transport": context.transport_type,
                 }
             else:
-                warnings.append(f"mcp-scan does not support transport type: {context.transport_type}")
+                warnings.append(
+                    f"mcp-scan does not support transport type: {context.transport_type}"
+                )
                 return None, None
 
-            config = {
-                "mcpServers": {
-                    "test-server": server_config
-                }
-            }
+            config = {"mcpServers": {"test-server": server_config}}
 
             json.dump(config, config_file, indent=2)
             config_path = config_file.name

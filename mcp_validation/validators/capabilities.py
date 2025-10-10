@@ -140,4 +140,11 @@ class CapabilitiesValidator(BaseValidator):
         except asyncio.TimeoutError:
             warnings.append(f"{method} request timed out")
         except Exception as e:
-            warnings.append(f"{method} request failed: {str(e)}")
+            error_msg = str(e)
+            # Provide more helpful context for common errors
+            if "Session terminated" in error_msg or "connection" in error_msg.lower():
+                warnings.append(
+                    f"{method} request failed: Connection lost (server closed session after previous request)"
+                )
+            else:
+                warnings.append(f"{method} request failed: {error_msg}")

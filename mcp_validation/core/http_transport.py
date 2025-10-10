@@ -665,17 +665,23 @@ class HTTPTransport(MCPTransport):
                 if self._init_result and hasattr(self._init_result, "capabilities"):
                     caps = self._init_result.capabilities
                     result_data["capabilities"] = {
-                        "tools": caps.tools.model_dump() if hasattr(caps, "tools") and caps.tools else {},
+                        "tools": (
+                            caps.tools.model_dump() if hasattr(caps, "tools") and caps.tools else {}
+                        ),
                         "resources": (
                             caps.resources.model_dump()
                             if hasattr(caps, "resources") and caps.resources
                             else {}
                         ),
                         "prompts": (
-                            caps.prompts.model_dump() if hasattr(caps, "prompts") and caps.prompts else {}
+                            caps.prompts.model_dump()
+                            if hasattr(caps, "prompts") and caps.prompts
+                            else {}
                         ),
                         "logging": (
-                            caps.logging.model_dump() if hasattr(caps, "logging") and caps.logging else {}
+                            caps.logging.model_dump()
+                            if hasattr(caps, "logging") and caps.logging
+                            else {}
                         ),
                     }
 

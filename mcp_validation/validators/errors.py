@@ -132,7 +132,7 @@ class ErrorComplianceValidator(BaseValidator):
         """Test error response for malformed JSON-RPC requests."""
         # This test only works with stdio transport where we can send raw malformed JSON
         # HTTP/SSE transports use MCP SDK which validates JSON before sending
-        if not context.process or not hasattr(context.process, 'stdin'):
+        if not context.process or not hasattr(context.process, "stdin"):
             data["malformed_request_test"]["error"] = None
             data["malformed_request_test"]["skipped"] = True
             data["malformed_request_test"]["reason"] = "Only applicable to stdio transport"
@@ -221,7 +221,9 @@ class ErrorComplianceValidator(BaseValidator):
                 }
             else:
                 # Got a response but no error field - server processed malformed JSON as valid
-                data["malformed_request_test"]["error"] = "Server processed malformed JSON as valid request"
+                data["malformed_request_test"][
+                    "error"
+                ] = "Server processed malformed JSON as valid request"
                 if self.config.get("strict_malformed_handling", False):
                     warnings.append(
                         "Server processed malformed JSON-RPC request (strict mode: should return parse error -32700)"
