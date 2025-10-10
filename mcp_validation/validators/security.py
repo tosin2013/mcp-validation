@@ -145,12 +145,36 @@ class SecurityValidator(BaseValidator):
 
         # Create temporary MCP configuration file for mcp-scan
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as config_file:
+            # Build server config based on transport type
+            server_config: dict[str, Any] = {}
+
+            if context.transport_type == "stdio":
+                # Stdio transport requires command and args
+                if not context.command_args or len(context.command_args) == 0:
+                    warnings.append("mcp-scan requires command_args for stdio transport")
+                    return None, None
+
+                server_config = {
+                    "command": context.command_args[0],
+                    "args": context.command_args[1:],
+                }
+            elif context.transport_type in ("http", "sse"):
+                # HTTP/SSE transport requires URL
+                if not context.endpoint:
+                    warnings.append(f"mcp-scan requires endpoint URL for {context.transport_type} transport")
+                    return None, None
+
+                server_config = {
+                    "url": context.endpoint,
+                    "transport": context.transport_type,
+                }
+            else:
+                warnings.append(f"mcp-scan does not support transport type: {context.transport_type}")
+                return None, None
+
             config = {
                 "mcpServers": {
-                    "test-server": {
-                        "command": context.command_args[0],
-                        "args": context.command_args[1:],
-                    }
+                    "test-server": server_config
                 }
             }
 
