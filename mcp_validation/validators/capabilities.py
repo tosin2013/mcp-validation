@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from .base import BaseValidator, ValidationContext, ValidatorResult
 
@@ -19,7 +19,7 @@ class CapabilitiesValidator(BaseValidator):
         return "Test advertised MCP server capabilities"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["protocol"]  # Needs protocol to be established first
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -64,9 +64,9 @@ class CapabilitiesValidator(BaseValidator):
     async def _test_resources_list(
         self,
         context: ValidationContext,
-        errors: List[str],
-        warnings: List[str],
-        data: Dict[str, Any],
+        errors: list[str],
+        warnings: list[str],
+        data: dict[str, Any],
     ) -> None:
         """Test resources/list request."""
         await self._test_list_request(
@@ -76,9 +76,9 @@ class CapabilitiesValidator(BaseValidator):
     async def _test_tools_list(
         self,
         context: ValidationContext,
-        errors: List[str],
-        warnings: List[str],
-        data: Dict[str, Any],
+        errors: list[str],
+        warnings: list[str],
+        data: dict[str, Any],
     ) -> None:
         """Test tools/list request."""
         await self._test_list_request(
@@ -88,9 +88,9 @@ class CapabilitiesValidator(BaseValidator):
     async def _test_prompts_list(
         self,
         context: ValidationContext,
-        errors: List[str],
-        warnings: List[str],
-        data: Dict[str, Any],
+        errors: list[str],
+        warnings: list[str],
+        data: dict[str, Any],
     ) -> None:
         """Test prompts/list request."""
         await self._test_list_request(
@@ -102,9 +102,9 @@ class CapabilitiesValidator(BaseValidator):
         context: ValidationContext,
         method: str,
         expected_field: str,
-        errors: List[str],
-        warnings: List[str],
-        items_list: List[str],
+        errors: list[str],
+        warnings: list[str],
+        items_list: list[str],
     ) -> None:
         """Test a generic list request."""
         try:
@@ -140,4 +140,11 @@ class CapabilitiesValidator(BaseValidator):
         except asyncio.TimeoutError:
             warnings.append(f"{method} request timed out")
         except Exception as e:
-            warnings.append(f"{method} request failed: {str(e)}")
+            error_msg = str(e)
+            # Provide more helpful context for common errors
+            if "Session terminated" in error_msg or "connection" in error_msg.lower():
+                warnings.append(
+                    f"{method} request failed: Connection lost (server closed session after previous request)"
+                )
+            else:
+                warnings.append(f"{method} request failed: {error_msg}")

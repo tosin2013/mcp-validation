@@ -2,7 +2,6 @@
 
 import asyncio
 import time
-from typing import List
 
 from .base import BaseValidator, ValidationContext, ValidatorResult
 
@@ -19,7 +18,7 @@ class PingValidator(BaseValidator):
         return "Test optional ping protocol functionality"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["protocol"]  # Depends on basic protocol being established
 
     def is_applicable(self, context: ValidationContext) -> bool:

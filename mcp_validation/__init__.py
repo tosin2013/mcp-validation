@@ -4,7 +4,7 @@ A modern, plugin-based validation framework for MCP (Model Context Protocol) ser
 Provides comprehensive testing of protocol compliance, capabilities, and security.
 """
 
-from typing import Any, Dict, List, Optional
+# Type annotations are now using built-in types (Python 3.10+)
 
 # CLI interface
 from .cli.main import cli_main
@@ -17,7 +17,7 @@ from .config.settings import (
     load_config_from_env,
 )
 from .core.result import MCPValidationResult, ValidationSession, ValidatorResult
-from .core.transport import JSONRPCTransport
+from .core.transport import JSONRPCTransport, MCPTransport, StdioTransport
 
 # Core components
 from .core.validator import MCPValidationOrchestrator, ValidatorRegistry
@@ -39,6 +39,8 @@ __all__ = [
     "MCPValidationResult",
     "ValidatorResult",
     "ValidationContext",
+    "MCPTransport",
+    "StdioTransport",
     "JSONRPCTransport",
     # Configuration
     "ConfigurationManager",
@@ -58,10 +60,10 @@ __all__ = [
 
 
 async def validate_server(
-    command_args: List[str],
-    env_vars: Optional[Dict[str, str]] = None,
-    profile_name: Optional[str] = None,
-    config_file: Optional[str] = None,
+    command_args: list[str],
+    env_vars: dict[str, str] | None = None,
+    profile_name: str | None = None,
+    config_file: str | None = None,
 ) -> ValidationSession:
     """
     Validate an MCP server with the specified configuration.

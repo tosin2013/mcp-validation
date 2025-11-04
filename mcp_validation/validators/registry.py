@@ -4,7 +4,7 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Protocol
 
 import aiohttp
 
@@ -22,11 +22,11 @@ class PackageInfo:
     """Information about a package to validate."""
 
     name: str
-    version: Optional[str] = None
+    version: str | None = None
     registry_type: str = "npm"  # npm, pypi, docker
 
 
-def extract_packages_from_command(command_args: List[str]) -> List[PackageInfo]:
+def extract_packages_from_command(command_args: list[str]) -> list[PackageInfo]:
     """Extract package information from MCP command arguments."""
     packages = []
 
@@ -90,7 +90,7 @@ class RegistryChecker(Protocol):
 
     async def check_package(
         self, package: PackageInfo, session: aiohttp.ClientSession
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if a package exists in the registry."""
         ...
 
@@ -103,7 +103,7 @@ class NPMRegistryChecker:
 
     async def check_package(
         self, package: PackageInfo, session: aiohttp.ClientSession
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if NPM package exists."""
         url = f"{self.registry_url}/{package.name}"
         debug_log(f"NPM: Checking package '{package.name}' at {url}")
@@ -176,7 +176,7 @@ class PyPIRegistryChecker:
 
     async def check_package(
         self, package: PackageInfo, session: aiohttp.ClientSession
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if PyPI package exists."""
         url = f"{self.registry_url}/pypi/{package.name}/json"
         debug_log(f"PyPI: Checking package '{package.name}' at {url}")
@@ -250,7 +250,7 @@ class DockerRegistryChecker:
 
     async def check_package(
         self, package: PackageInfo, session: aiohttp.ClientSession
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if Docker image exists."""
         # For Docker Hub, use the Hub API which is more accessible
         # Format: namespace/repository or just repository for official images
@@ -336,7 +336,7 @@ class DockerRegistryChecker:
 class RegistryValidator(BaseValidator):
     """Validator for checking package existence in registries."""
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: dict[str, Any] = None):
         super().__init__(config)
         debug_log(f"Initializing RegistryValidator with config: {config}")
 
@@ -358,7 +358,7 @@ class RegistryValidator(BaseValidator):
         self.packages = self._parse_packages_config()
         debug_log(f"Parsed {len(self.packages)} packages for validation")
 
-    def _parse_packages_config(self) -> List[PackageInfo]:
+    def _parse_packages_config(self) -> list[PackageInfo]:
         """Parse packages configuration from validator config."""
         packages = []
         packages_config = self.config.get("packages", [])
@@ -419,7 +419,7 @@ class RegistryValidator(BaseValidator):
         return "Validates that specified packages exist in their respective registries"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return []  # No dependencies on other validators
 
     async def validate(self, context: ValidationContext) -> ValidatorResult:

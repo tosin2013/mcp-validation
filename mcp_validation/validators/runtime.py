@@ -5,7 +5,7 @@ import os
 import shutil
 import stat
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..utils.debug import debug_log as _debug_log
 from .base import BaseValidator, ValidationContext, ValidatorResult
@@ -28,7 +28,7 @@ class RuntimeExistsValidator(BaseValidator):
         return "Validates that the specified runtime command exists in system PATH"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return []  # No dependencies - runs early
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -125,7 +125,7 @@ class RuntimeExistsValidator(BaseValidator):
             execution_time=execution_time,
         )
 
-    async def _get_runtime_version(self, runtime_command: str) -> Optional[str]:
+    async def _get_runtime_version(self, runtime_command: str) -> str | None:
         """Try to get version information from the runtime."""
         version_commands = [["--version"], ["-v"], ["version"], ["-V"], ["--help"]]  # Last resort
 
@@ -160,7 +160,7 @@ class RuntimeExistsValidator(BaseValidator):
         debug_log("Could not determine runtime version", "WARN")
         return None
 
-    def _find_all_runtime_locations(self, runtime_command: str) -> List[str]:
+    def _find_all_runtime_locations(self, runtime_command: str) -> list[str]:
         """Find all locations of the runtime command in PATH."""
         locations = []
         system_path = os.environ.get("PATH", "")
@@ -188,7 +188,7 @@ class RuntimeExistsValidator(BaseValidator):
 
         return locations
 
-    def _get_installation_suggestions(self, runtime_command: str) -> Optional[str]:
+    def _get_installation_suggestions(self, runtime_command: str) -> str | None:
         """Provide installation suggestions for common runtime commands."""
         suggestions = {
             "uv": "Install with: curl -LsSf https://astral.sh/uv/install.sh | sh",
@@ -221,7 +221,7 @@ class RuntimeExecutableValidator(BaseValidator):
         return "Validates that the runtime command is executable by the current user"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["runtime_exists"]  # Depends on runtime existing
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -313,7 +313,7 @@ class RuntimeExecutableValidator(BaseValidator):
             execution_time=execution_time,
         )
 
-    def _check_file_permissions(self, file_path: str) -> Dict[str, Any]:
+    def _check_file_permissions(self, file_path: str) -> dict[str, Any]:
         """Check file permissions and ownership details."""
         result = {
             "file_path": file_path,
@@ -365,7 +365,7 @@ class RuntimeExecutableValidator(BaseValidator):
 
         return result
 
-    async def _test_runtime_execution(self, runtime_command: str) -> Dict[str, Any]:
+    async def _test_runtime_execution(self, runtime_command: str) -> dict[str, Any]:
         """Test actual execution of the runtime command."""
         result = {
             "test_execution_successful": False,

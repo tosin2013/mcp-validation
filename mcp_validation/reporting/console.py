@@ -1,6 +1,6 @@
 """Console reporting for MCP validation results."""
 
-from typing import Any, Dict
+from typing import Any
 
 from ..core.result import ValidationSession, ValidatorResult
 
@@ -69,7 +69,7 @@ class ConsoleReporter:
             for warning in result.warnings:
                 print(f"    ⚠️  {warning}")
 
-    def _report_protocol_data(self, data: Dict[str, Any]) -> None:
+    def _report_protocol_data(self, data: dict[str, Any]) -> None:
         """Report protocol validation specific data."""
         server_info = data.get("server_info", {})
         if server_info:
@@ -82,7 +82,7 @@ class ConsoleReporter:
             caps = list(capabilities.keys())
             print(f"    🔧 Capabilities: {', '.join(caps)}")
 
-    def _report_capabilities_data(self, data: Dict[str, Any]) -> None:
+    def _report_capabilities_data(self, data: dict[str, Any]) -> None:
         """Report capabilities validation specific data."""
         tools = data.get("tools", [])
         if tools:
@@ -102,7 +102,7 @@ class ConsoleReporter:
             if len(resources) > 5:
                 print(f"        ... and {len(resources) - 5} more")
 
-    def _report_ping_data(self, data: Dict[str, Any]) -> None:
+    def _report_ping_data(self, data: dict[str, Any]) -> None:
         """Report ping validation specific data."""
         if data.get("supported"):
             response_time = data.get("response_time_ms", 0)
@@ -114,7 +114,7 @@ class ConsoleReporter:
             else:
                 print(f"    🏓 Ping: {error}")
 
-    def _report_errors_data(self, data: Dict[str, Any]) -> None:
+    def _report_errors_data(self, data: dict[str, Any]) -> None:
         """Report error compliance validation specific data."""
         invalid_method = data.get("invalid_method_test", {})
         malformed_request = data.get("malformed_request_test", {})
@@ -128,13 +128,13 @@ class ConsoleReporter:
 
         if passed_tests:
             tests_str = " & ".join(passed_tests)
-            print(f"    ⚠️  Error compliance: {tests_str} handling validated")
+            print(f"    ✅ Error compliance: {tests_str} handling validated")
 
         if compliance_issues:
             issue_count = len(compliance_issues)
             print(f"    ⚠️  Error compliance: {issue_count} format issue(s) detected")
 
-    def _report_security_data(self, data: Dict[str, Any]) -> None:
+    def _report_security_data(self, data: dict[str, Any]) -> None:
         """Report security validation specific data."""
         tools_scanned = data.get("tools_scanned", 0)
         vulnerabilities_found = data.get("vulnerabilities_found", 0)
@@ -167,7 +167,7 @@ class ConsoleReporter:
         if scan_file:
             print(f"        💾 Report saved: {scan_file}")
 
-    def _report_container_ubi_data(self, data: Dict[str, Any]) -> None:
+    def _report_container_ubi_data(self, data: dict[str, Any]) -> None:
         """Report container UBI validation specific data."""
         image_name = data.get("image_name", "Unknown")
         base_image = data.get("base_image", "Unknown")
@@ -184,7 +184,7 @@ class ConsoleReporter:
         else:
             print(f"    📦 Base Image: {base_image} (Non-UBI)")
 
-    def _report_container_version_data(self, data: Dict[str, Any]) -> None:
+    def _report_container_version_data(self, data: dict[str, Any]) -> None:
         """Report container version validation specific data."""
         image_name = data.get("image_name", "Unknown")
         image_tag = data.get("image_tag", "Unknown")

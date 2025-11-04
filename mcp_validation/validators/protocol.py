@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 from .base import BaseValidator, ValidationContext, ValidatorResult
 
@@ -19,7 +19,7 @@ class ProtocolValidator(BaseValidator):
         return "Basic MCP protocol compliance validation"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return []  # No dependencies - this is the foundation
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -69,15 +69,15 @@ class ProtocolValidator(BaseValidator):
         )
 
     async def _test_initialize(
-        self, context: ValidationContext, errors: List[str], data: Dict[str, Any]
+        self, context: ValidationContext, errors: list[str], data: dict[str, Any]
     ) -> bool:
         """Test the initialize request/response."""
         try:
-            # Send initialize request
+            # Send initialize request with latest protocol version
             init_params = {
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": "2025-06-18",
                 "capabilities": {"roots": {"listChanged": True}, "sampling": {}},
-                "clientInfo": {"name": "mcp-validator", "version": "1.0.0"},
+                "clientInfo": {"name": "mcp-validator", "version": "2.0.0"},
             }
 
             response = await context.transport.send_and_receive(
@@ -106,10 +106,13 @@ class ProtocolValidator(BaseValidator):
             data["capabilities"] = result.get("capabilities", {})
             data["protocol_version"] = result.get("protocolVersion")
 
-            # Validate protocol version
+            # Validate protocol version - support multiple MCP versions
             protocol_version = result.get("protocolVersion")
-            if protocol_version != "2024-11-05":
-                errors.append(f"Unsupported protocol version: {protocol_version}")
+            supported_versions = ["2024-11-05", "2025-03-26", "2025-06-18"]
+            if protocol_version not in supported_versions:
+                errors.append(
+                    f"Unsupported protocol version: {protocol_version} (supported: {', '.join(supported_versions)})"
+                )
 
             return len(errors) == 0
 
@@ -120,7 +123,7 @@ class ProtocolValidator(BaseValidator):
             errors.append(f"Initialize request failed: {str(e)}")
             return False
 
-    async def _send_initialized(self, context: ValidationContext, errors: List[str]) -> None:
+    async def _send_initialized(self, context: ValidationContext, errors: list[str]) -> None:
         """Send the initialized notification."""
         try:
             await context.transport.send_notification("notifications/initialized")

@@ -6,7 +6,7 @@ import re
 import shutil
 import tempfile
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from ..utils.debug import debug_log as _debug_log
@@ -30,7 +30,7 @@ class RepoAvailabilityValidator(BaseValidator):
         return "Validates repository URL accessibility and OSS project structure"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return []  # No dependencies - runs first
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -199,7 +199,7 @@ class RepoAvailabilityValidator(BaseValidator):
         except Exception:
             return False
 
-    async def _clone_repository(self, repo_url: str, temp_dir: str) -> Dict[str, Any]:
+    async def _clone_repository(self, repo_url: str, temp_dir: str) -> dict[str, Any]:
         """Attempt to clone the repository."""
         result = {
             "clone_successful": False,
@@ -247,7 +247,7 @@ class RepoAvailabilityValidator(BaseValidator):
 
         return result
 
-    def _check_required_files(self, repo_path: str) -> Dict[str, Any]:
+    def _check_required_files(self, repo_path: str) -> dict[str, Any]:
         """Check for required OSS project files."""
         result = {
             "has_readme": False,
@@ -346,7 +346,7 @@ class LicenseValidator(BaseValidator):
         return "Validates repository has acceptable OSS license"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["repo_availability"]  # Depends on repo being available
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -451,7 +451,7 @@ class LicenseValidator(BaseValidator):
             execution_time=execution_time,
         )
 
-    async def _clone_repository(self, repo_url: str, clone_path: str) -> Dict[str, Any]:
+    async def _clone_repository(self, repo_url: str, clone_path: str) -> dict[str, Any]:
         """Clone repository for license checking."""
         result = {"clone_successful": False, "error": None}
         timeout = self.config.get("clone_timeout", 30.0)
@@ -486,7 +486,7 @@ class LicenseValidator(BaseValidator):
 
         return result
 
-    async def _check_license(self, repo_path: str) -> Dict[str, Any]:
+    async def _check_license(self, repo_path: str) -> dict[str, Any]:
         """Check and validate license files."""
         result = {
             "license_detected": False,
@@ -557,7 +557,7 @@ class LicenseValidator(BaseValidator):
 
         return result
 
-    def _detect_license_type(self, license_content: str) -> Optional[str]:
+    def _detect_license_type(self, license_content: str) -> str | None:
         """Detect license type from content."""
         content_lower = license_content.lower()
 

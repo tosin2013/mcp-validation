@@ -3,7 +3,6 @@
 import argparse
 import asyncio
 import sys
-from typing import Dict, List, Optional
 
 from ..config.settings import ConfigurationManager, load_config_from_env
 from ..core.validator import MCPValidationOrchestrator
@@ -11,7 +10,7 @@ from ..reporting.console import ConsoleReporter, print_profile_info, print_valid
 from ..reporting.json_report import JSONReporter
 
 
-def parse_env_args(env_args: List[str]) -> Dict[str, str]:
+def parse_env_args(env_args: list[str]) -> dict[str, str]:
     """Parse environment variable arguments in KEY=VALUE format."""
     env_vars = {}
     for env_arg in env_args:
@@ -22,7 +21,7 @@ def parse_env_args(env_args: List[str]) -> Dict[str, str]:
     return env_vars
 
 
-def detect_runtime_command(command_args: List[str]) -> Optional[str]:
+def detect_runtime_command(command_args: list[str]) -> str | None:
     """Auto-detect runtime command from MCP server command arguments."""
     if not command_args:
         return None
@@ -75,7 +74,7 @@ def detect_runtime_command(command_args: List[str]) -> Optional[str]:
     return None
 
 
-def is_container_runtime_command(command_args: List[str]) -> bool:
+def is_container_runtime_command(command_args: list[str]) -> bool:
     """Check if command is a container runtime command (docker/podman run)."""
     if not command_args or len(command_args) < 3:
         return False
@@ -90,17 +89,38 @@ def create_argument_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Configuration Examples:
-  # Use default comprehensive profile
+  # Use default comprehensive profile (stdio transport)
   mcp-validate -- npx @dynatrace-oss/dynatrace-mcp-server
 
-  # Use specific profile
+  # Use HTTP transport
+  mcp-validate --transport http --endpoint http://localhost:3000/mcp
+
+  # Use HTTP transport with OAuth Bearer token
+  mcp-validate --transport http --endpoint http://localhost:3000/mcp --auth-token your_bearer_token
+
+  # Use HTTP transport with OAuth Dynamic Client Registration
+  mcp-validate --transport http --endpoint http://localhost:3000/mcp --client-id your_client_id --client-secret your_secret
+
+  # Use SSE transport
+  mcp-validate --transport sse --endpoint https://example.com/sse
+
+  # Use SSE transport with authentication
+  mcp-validate --transport sse --endpoint https://example.com/sse --auth-token your_bearer_token
+
+  # Use specific profile with stdio transport
   mcp-validate --profile security_focused -- python server.py
 
-  # Use custom config file
+  # Use specific profile with HTTP transport
+  mcp-validate --profile security_focused --transport http --endpoint http://localhost:3000/mcp
+
+  # Use custom config file with stdio transport
   mcp-validate --config ./my-config.json -- node server.js
 
-  # Override specific validators
+  # Override specific validators with stdio transport
   mcp-validate --enable ping --disable security -- ./server
+
+  # JSON report with stdio transport
+  mcp-validate --json-report validation-report.json -- python server.py
 
   # List available profiles and validators
   mcp-validate --list-profiles
@@ -112,8 +132,12 @@ Environment Variables:
         """,
     )
 
-    # Command arguments
-    parser.add_argument("command", nargs="*", help="Command and arguments to run the MCP server")
+    # Command arguments (everything after -- for stdio transport)
+    parser.add_argument(
+        "command",
+        nargs=argparse.REMAINDER,
+        help="Command and arguments to run the MCP server (use -- to separate tool options from server command)",
+    )
 
     # Configuration options
     parser.add_argument("--config", metavar="FILE", help="Configuration file path")
@@ -185,6 +209,39 @@ Environment Variables:
         help="Runtime command to validate (e.g., uv, docker, npx). If not specified, will be auto-detected from the MCP server command.",
     )
 
+    # Transport options
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http", "sse"],
+        default="stdio",
+        help="Transport type to use for MCP communication (default: stdio)",
+    )
+
+    parser.add_argument(
+        "--endpoint",
+        metavar="URL",
+        help="HTTP endpoint URL for http transport (e.g., http://localhost:3000/mcp)",
+    )
+
+    # OAuth 2.0 authentication options
+    parser.add_argument(
+        "--auth-token",
+        metavar="TOKEN",
+        help="OAuth 2.0 Bearer token for authenticated HTTP transport",
+    )
+
+    parser.add_argument(
+        "--client-id",
+        metavar="ID",
+        help="OAuth 2.0 client ID for Dynamic Client Registration",
+    )
+
+    parser.add_argument(
+        "--client-secret",
+        metavar="SECRET",
+        help="OAuth 2.0 client secret for Dynamic Client Registration",
+    )
+
     return parser
 
 
@@ -211,9 +268,31 @@ async def main():
             print_validator_info(orchestrator)
             return 0
 
-        # Validate command arguments
-        if not args.command:
-            parser.error("Command arguments required for validation")
+        # Process command arguments (remove -- separator if present)
+        command_args = args.command
+        if command_args and command_args[0] == "--":
+            command_args = command_args[1:]
+
+        # Validate transport-specific arguments
+        if args.transport == "stdio":
+            if not command_args:
+                parser.error(
+                    "Command arguments required for stdio transport (use -- to separate options from command)"
+                )
+            if args.endpoint:
+                parser.error("--endpoint is not valid for stdio transport")
+        elif args.transport == "http":
+            if not args.endpoint:
+                parser.error("--endpoint is required for http transport")
+            if not args.endpoint.startswith(("http://", "https://")):
+                parser.error("--endpoint must be a valid HTTP URL (http:// or https://)")
+        elif args.transport == "sse":
+            if not args.endpoint:
+                parser.error("--endpoint is required for sse transport")
+            if not args.endpoint.startswith(("http://", "https://")):
+                parser.error("--endpoint must be a valid HTTP URL (http:// or https://)")
+        else:
+            parser.error(f"Unsupported transport: {args.transport}")
 
         # Apply command-line overrides
         if args.profile:
@@ -269,7 +348,7 @@ async def main():
                 active_profile.validators["license"].parameters["repo_url"] = args.repo_url
 
         # Enable runtime validators based on command or --runtime-command
-        runtime_command = args.runtime_command or detect_runtime_command(args.command)
+        runtime_command = args.runtime_command or detect_runtime_command(command_args)
         if runtime_command:
             # Add runtime validators to profile if not already present
             if "runtime_exists" not in active_profile.validators:
@@ -303,7 +382,7 @@ async def main():
                 ] = runtime_command
 
         # Enable container validators for container runtime commands
-        if is_container_runtime_command(args.command):
+        if is_container_runtime_command(command_args):
             # Add container UBI validator
             if "container_ubi" not in active_profile.validators:
                 from ..config.settings import ValidatorConfig
@@ -343,13 +422,29 @@ async def main():
         env_vars = parse_env_args(args.env) if args.env else None
 
         # Display what we're testing
-        print(f"Testing MCP server: {' '.join(args.command)}")
+        print(f"Transport: {args.transport}")
+        if args.transport == "stdio" and command_args:
+            print(f"Testing MCP server: {' '.join(command_args)}")
+        elif args.transport in ["http", "sse"]:
+            print(f"Testing MCP endpoint: {args.endpoint}")
+            if getattr(args, "auth_token", None):
+                print("Authentication: OAuth Bearer token provided")
+            elif getattr(args, "client_id", None) and args.transport == "http":
+                print(f"Authentication: OAuth Pre-registered Client (Client ID: {args.client_id})")
+            elif args.transport == "http":
+                print("Authentication: OAuth Dynamic Client Registration")
+            else:
+                # SSE transport - only show auth if auth_token is provided
+                if getattr(args, "auth_token", None):
+                    print("Authentication: Bearer token provided")
+                else:
+                    print("Authentication: None")
         print(f"Using profile: {active_profile.name}")
         if args.repo_url:
             print(f"Repository URL: {args.repo_url}")
         if runtime_command:
             print(f"Runtime command: {runtime_command}")
-        if is_container_runtime_command(args.command):
+        if command_args and is_container_runtime_command(command_args):
             print("Container runtime detected: Container image validation enabled")
         if env_vars:
             print("Environment variables:")
@@ -361,10 +456,16 @@ async def main():
 
         # Run validation
         session = await orchestrator.validate_server(
-            command_args=args.command,
+            command_args=command_args,
             env_vars=env_vars,
             profile_name=args.profile,
             debug=args.debug,
+            verbose=args.verbose,
+            transport_type=args.transport,
+            endpoint=args.endpoint,
+            auth_token=getattr(args, "auth_token", None),
+            client_id=getattr(args, "client_id", None),
+            client_secret=getattr(args, "client_secret", None),
         )
 
         # Display results
@@ -375,7 +476,7 @@ async def main():
         if args.json_report:
             json_reporter = JSONReporter()
             # Use the final command args from the session (includes injected -e options for containers)
-            final_command_args = session.command_args if session.command_args else args.command
+            final_command_args = session.command_args if session.command_args else command_args
             json_reporter.save_report(session, args.json_report, final_command_args, env_vars)
 
         # Exit with appropriate code

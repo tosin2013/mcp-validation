@@ -6,7 +6,7 @@ import os
 import shutil
 import tempfile
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from .base import BaseValidator, ValidationContext, ValidatorResult
 
@@ -23,7 +23,7 @@ class SecurityValidator(BaseValidator):
         return "Security analysis using mcp-scan tool"
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         return ["protocol"]  # Needs basic protocol established
 
     def is_applicable(self, context: ValidationContext) -> bool:
@@ -45,10 +45,13 @@ class SecurityValidator(BaseValidator):
         start_time = time.time()
         errors = []
         warnings = []
+        # Get tools count from context (discovered by capabilities validator)
+        tools_count = len(context.discovered_tools) if context.discovered_tools else 0
+
         data = {
             "scan_results": None,
             "scan_file": None,
-            "tools_scanned": 0,
+            "tools_scanned": tools_count,  # Use discovered tools count as baseline
             "vulnerabilities_found": 0,
             "vulnerability_types": [],
             "risk_levels": [],
@@ -108,7 +111,9 @@ class SecurityValidator(BaseValidator):
                         regular_codes.append(code)
 
                     if len(critical_codes) > 0:
-                        errors.append(f"Found {len(critical_codes)} critical issues: {critical_codes}")
+                        errors.append(
+                            f"Found {len(critical_codes)} critical issues: {critical_codes}"
+                        )
 
                     # Those not in the critical_code list are considered warnings.
                     if len(regular_codes) > 0:
@@ -134,20 +139,44 @@ class SecurityValidator(BaseValidator):
         )
 
     async def _run_mcp_scan(
-        self, context: ValidationContext, warnings: List[str]
-    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        self, context: ValidationContext, warnings: list[str]
+    ) -> tuple[dict[str, Any] | None, str | None]:
         """Run mcp-scan security analysis on the server."""
 
         # Create temporary MCP configuration file for mcp-scan
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as config_file:
-            config = {
-                "mcpServers": {
-                    "test-server": {
-                        "command": context.command_args[0],
-                        "args": context.command_args[1:],
-                    }
+            # Build server config based on transport type
+            server_config: dict[str, Any] = {}
+
+            if context.transport_type == "stdio":
+                # Stdio transport requires command and args
+                if not context.command_args or len(context.command_args) == 0:
+                    warnings.append("mcp-scan requires command_args for stdio transport")
+                    return None, None
+
+                server_config = {
+                    "command": context.command_args[0],
+                    "args": context.command_args[1:],
                 }
-            }
+            elif context.transport_type in ("http", "sse"):
+                # HTTP/SSE transport requires URL
+                if not context.endpoint:
+                    warnings.append(
+                        f"mcp-scan requires endpoint URL for {context.transport_type} transport"
+                    )
+                    return None, None
+
+                server_config = {
+                    "url": context.endpoint,
+                    "transport": context.transport_type,
+                }
+            else:
+                warnings.append(
+                    f"mcp-scan does not support transport type: {context.transport_type}"
+                )
+                return None, None
+
+            config = {"mcpServers": {"test-server": server_config}}
 
             json.dump(config, config_file, indent=2)
             config_path = config_file.name
@@ -212,8 +241,8 @@ class SecurityValidator(BaseValidator):
                 pass
 
     def _parse_scan_results(
-        self, scan_results: Dict[str, Any]
-    ) -> Tuple[int, List[Dict[str, Any]], List[Dict[str, Any]]]:
+        self, scan_results: dict[str, Any]
+    ) -> tuple[int, list[dict[str, Any]], list[dict[str, Any]]]:
         """Parse mcp-scan results to extract metrics."""
         tools_scanned = 0
         vulnerabilities = []
@@ -237,7 +266,7 @@ class SecurityValidator(BaseValidator):
         return tools_scanned, vulnerabilities, issues
 
     def _check_vulnerability_threshold(
-        self, vulnerabilities: List[Dict[str, Any]], threshold: str
+        self, vulnerabilities: list[dict[str, Any]], threshold: str
     ) -> bool:
         """Check if vulnerabilities exceed the specified threshold."""
         if not vulnerabilities:
